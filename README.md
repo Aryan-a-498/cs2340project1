@@ -33,6 +33,15 @@ pip3 install -r requirements.txt
 cp .env.example .env
 ```
 - After doing this add the SECRET_KEY
+**Note:** Generate your own `SECRET_KEY`.
+Generate with the below command and then copy the key into .env:
+```
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+then in .env set:
+```
+SECRET_KEY=<your_key_here>
+```
 
 ## Working on project
 
