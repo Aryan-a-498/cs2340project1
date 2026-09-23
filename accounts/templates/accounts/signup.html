@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>{{ template_data.title }}</title>
+</head>
+<body>
+  <h2>Sign Up</h2>
+  <form method="POST">
+    {% csrf_token %}
+    {{ template_data.form.as_p }}
+    <button type="submit">Sign Up</button>
+  </form>
+</body>
+</html>

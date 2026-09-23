@@ -1,6 +1,21 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
-from django.http import HttpResponse
+from .forms import CustomUserCreationForm
+
+def signup(request):
+    template_data = {}
+    template_data['title'] = 'Sign Up'
+    if request.method == 'GET':
+        template_data['form'] = CustomUserCreationForm()
+        return render(request, 'accounts/signup.html', {'template_data': template_data})
+    elif request.method == 'POST':
+        form = CustomUserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('accounts.login')
+        else:
+            template_data['form'] = form
+            return render(request, 'accounts/signup.html', {'template_data': template_data})
 
 
 def login(request):
