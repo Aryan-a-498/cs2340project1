@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>{{ template_data.title }}</title>
+</head>
+<body>
+  <h2>Recommended Candidates for {{ template_data.job.title }}</h2>
+
+  {% if template_data.candidates %}
+    <ul>
+      {% for candidate in template_data.candidates %}
+        <li>{{ candidate }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No matching candidates yet.</p>
+  {% endif %}
+</body>
+</html>
