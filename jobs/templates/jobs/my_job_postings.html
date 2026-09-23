@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>{{ template_data.title }}</title>
+</head>
+<body>
+  <h2>My Job Postings</h2>
+
+  {% if template_data.job_postings %}
+    <ul>
+      {% for job in template_data.job_postings %}
+        <li>
+          {{ job.title }} at {{ job.company_name }} —
+          <a href="{% url 'jobs.recommended_candidates' job.id %}">View Candidates</a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>You haven't posted any jobs yet.</p>
+  {% endif %}
+</body>
+</html>

@@ -14,3 +14,12 @@ def recommended_candidates(request, job_id):
     template_data['job'] = job
     template_data['candidates'] = job.recommended_candidates()
     return render(request, 'jobs/recommended_candidates.html', {'template_data': template_data})
+
+@login_required
+def my_job_postings(request):
+    if request.user.role != User.Role.RECRUITER:
+        return HttpResponseForbidden("Only recruiters can view this page.")
+    template_data = {}
+    template_data['title'] = 'My Job Postings'
+    template_data['job_postings'] = JobPosting.objects.filter(posted_by=request.user)
+    return render(request, 'jobs/my_job_postings.html', {'template_data': template_data})

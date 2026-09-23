@@ -19,7 +19,7 @@ def login(request):
             return render(request, 'accounts/login.html', {'template_data': template_data})
         else:
             auth_login(request, user)
-            return HttpResponse("Logged in successfully.")
+            return redirect('jobs.my_job_postings')
 
 
 def logout(request):
