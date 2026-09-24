@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+  crossorigin=""
+>
+{% endblock %}
+
+{% block content %}
+<header class="page-heading">
+  <p class="eyebrow">Your search area</p>
+  <h1>Find work within reach.</h1>
+  <p>Set your commute once, then focus only on opportunities that fit your day.</p>
+</header>
+
+<div class="explore-layout">
+  <aside class="preference-card card">
+    <h2>Commute preference</h2>
+    <p>Click the map to choose where your commute begins.</p>
+    <form method="post" id="commute-form">
+      {% csrf_token %}
+      {{ form.preferred_latitude }}
+      {{ form.preferred_longitude }}
+      {% if form.non_field_errors %}
+        <div class="form-errors">{{ form.non_field_errors }}</div>
+      {% endif %}
+      <div id="coordinate-status" class="coordinate-status">
+        {% if profile.preferred_latitude != None %}
+          Commute center selected
+        {% else %}
+          No commute center selected yet
+        {% endif %}
+      </div>
+      <div class="form-field">
+        <label for="{{ form.commute_radius_miles.id_for_label }}">Radius in miles</label>
+        {{ form.commute_radius_miles }}
+        {% for error in form.commute_radius_miles.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      </div>
+      <button type="submit" class="button full-width">Update results</button>
+    </form>
+  </aside>
+
+  <div>
+    <section class="map-card card" aria-label="Commute map">
+      <div id="job-map"></div>
+      <p class="map-hint">Only jobs inside the green commute circle appear below.</p>
+    </section>
+
+    <div class="results-heading">
+      <h2>Jobs in your radius</h2>
+      {% if profile.preferred_latitude != None %}<span>{{ jobs|length }} result{{ jobs|length|pluralize }}</span>{% endif %}
+    </div>
+
+    {% if profile.preferred_latitude == None %}
+      <section class="empty-state card">
+        <h2>Choose your starting point</h2>
+        <p>Click anywhere on the map, choose a radius, and update your results.</p>
+      </section>
+    {% elif jobs %}
+      <div class="job-list">
+        {% for job in jobs %}
+          <article class="job-card card">
+            <div>
+              <h3>{{ job.title }}</h3>
+              <p class="job-company">{{ job.company_name }} · {{ job.location }}</p>
+              <div class="job-meta">
+                <span class="pill distance-pill">{{ job.distance_miles|floatformat:1 }} miles away</span>
+                {% for skill in job.skills_required.all %}<span class="pill">{{ skill.name }}</span>{% endfor %}
+              </div>
+            </div>
+            {% if job.id in cart_job_ids %}
+              <span class="in-cart">In your cart</span>
+            {% else %}
+              <form method="post" action="{% url 'jobs.add_to_cart' job.id %}">
+                {% csrf_token %}
+                <button type="submit" class="button button-secondary">Add to cart</button>
+              </form>
+            {% endif %}
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <section class="empty-state card">
+        <h2>No jobs in this radius</h2>
+        <p>Try widening your commute radius or choosing another starting point.</p>
+      </section>
+    {% endif %}
+  </div>
+</div>
+
+{{ map_jobs|json_script:"map-jobs" }}
+{% endblock %}
+
+{% block extra_scripts %}
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""
+></script>
+<script>
+  const savedLatitude = {% if profile.preferred_latitude != None %}{{ profile.preferred_latitude }}{% else %}33.749{% endif %};
+  const savedLongitude = {% if profile.preferred_longitude != None %}{{ profile.preferred_longitude }}{% else %}-84.388{% endif %};
+  const hasSavedCenter = {% if profile.preferred_latitude != None %}true{% else %}false{% endif %};
+  const map = L.map('job-map').setView([savedLatitude, savedLongitude], hasSavedCenter ? 11 : 10);
+
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+
+  const latitudeInput = document.getElementById('id_preferred_latitude');
+  const longitudeInput = document.getElementById('id_preferred_longitude');
+  const radiusInput = document.getElementById('id_commute_radius_miles');
+  const coordinateStatus = document.getElementById('coordinate-status');
+  let centerMarker;
+  let radiusCircle;
+
+  function drawCommuteArea(latitude, longitude) {
+    if (centerMarker) map.removeLayer(centerMarker);
+    if (radiusCircle) map.removeLayer(radiusCircle);
+    centerMarker = L.marker([latitude, longitude]).addTo(map).bindPopup('Your commute starts here');
+    radiusCircle = L.circle([latitude, longitude], {
+      radius: Number(radiusInput.value || 10) * 1609.344,
+      color: '#176b52',
+      fillColor: '#69b99d',
+      fillOpacity: 0.17,
+      weight: 2
+    }).addTo(map);
+  }
+
+  if (hasSavedCenter) drawCommuteArea(savedLatitude, savedLongitude);
+
+  map.on('click', function (event) {
+    latitudeInput.value = event.latlng.lat.toFixed(6);
+    longitudeInput.value = event.latlng.lng.toFixed(6);
+    coordinateStatus.textContent = 'Commute center selected';
+    drawCommuteArea(event.latlng.lat, event.latlng.lng);
+  });
+
+  radiusInput.addEventListener('input', function () {
+    if (latitudeInput.value && longitudeInput.value) {
+      drawCommuteArea(Number(latitudeInput.value), Number(longitudeInput.value));
+    }
+  });
+
+  const jobs = JSON.parse(document.getElementById('map-jobs').textContent);
+  jobs.forEach(function (job) {
+    const popup = document.createElement('div');
+    const heading = document.createElement('strong');
+    heading.textContent = job.title;
+    popup.append(heading, document.createElement('br'));
+    popup.append(job.company, document.createElement('br'), `${job.distance} miles away`);
+    L.marker([job.latitude, job.longitude])
+      .addTo(map)
+      .bindPopup(popup);
+  });
+</script>
+{% endblock %}

@@ -1,19 +1,22 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>{{ template_data.title }}</title>
-</head>
-<body>
-  <h2>Recommended Candidates for {{ template_data.job.title }}</h2>
+{% extends "base.html" %}
 
-  {% if template_data.candidates %}
-    <ul>
-      {% for candidate in template_data.candidates %}
-        <li>{{ candidate }}</li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p>No matching candidates yet.</p>
-  {% endif %}
-</body>
-</html>
+{% block content %}
+<header class="page-heading">
+  <p class="eyebrow">Candidate matches</p>
+  <h1>{{ job.title }}</h1>
+  <p>Job seekers are ordered by the number of required skills they share.</p>
+</header>
+
+{% if candidates %}
+  <div class="simple-list">
+    {% for candidate in candidates %}
+      <article class="simple-card card"><h2>{{ candidate }}</h2></article>
+    {% endfor %}
+  </div>
+{% else %}
+  <section class="empty-state card">
+    <h2>No matching candidates yet</h2>
+    <p>Matches will appear when job seekers add skills required by this role.</p>
+  </section>
+{% endif %}
+{% endblock %}

@@ -1,22 +1,26 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>{{ template_data.title }}</title>
-</head>
-<body>
-  <h2>My Job Postings</h2>
+{% extends "base.html" %}
 
-  {% if template_data.job_postings %}
-    <ul>
-      {% for job in template_data.job_postings %}
-        <li>
-          {{ job.title }} at {{ job.company_name }} —
-          <a href="{% url 'jobs.recommended_candidates' job.id %}">View Candidates</a>
-        </li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p>You haven't posted any jobs yet.</p>
-  {% endif %}
-</body>
-</html>
+{% block content %}
+<header class="page-heading">
+  <p class="eyebrow">Recruiter workspace</p>
+  <h1>My job postings</h1>
+  <p>Review the roles you manage and find candidates whose skills match.</p>
+</header>
+
+{% if job_postings %}
+  <div class="simple-list">
+    {% for job in job_postings %}
+      <article class="simple-card card">
+        <h2>{{ job.title }}</h2>
+        <p>{{ job.company_name }}{% if job.location %} · {{ job.location }}{% endif %}</p>
+        <a class="button button-secondary" href="{% url 'jobs.recommended_candidates' job.id %}">View candidates</a>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <section class="empty-state card">
+    <h2>No postings yet</h2>
+    <p>Your job postings will appear here.</p>
+  </section>
+{% endif %}
+{% endblock %}

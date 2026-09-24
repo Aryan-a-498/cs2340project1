@@ -1,20 +1,27 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>{{ template_data.title }}</title>
-</head>
-<body>
-  <h2>Login</h2>
-  {% if template_data.error %}
-    <p>{{ template_data.error }}</p>
-  {% endif %}
-  <form method="POST">
-    {% csrf_token %}
-    <label for="username">Username</label>
-    <input id="username" type="text" name="username" required>
-    <label for="password">Password</label>
-    <input id="password" type="password" name="password" required>
-    <button type="submit">Login</button>
-  </form>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block content %}
+<section class="auth-wrap">
+  <div class="auth-card card">
+    <p class="eyebrow">Welcome back</p>
+    <h1>Log in to Scoutly</h1>
+    <p>Continue finding the opportunities that fit you.</p>
+    {% if template_data.error %}
+      <div class="form-errors">{{ template_data.error }}</div>
+    {% endif %}
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-field">
+        <label for="username">Username</label>
+        <input id="username" type="text" name="username" autocomplete="username" required autofocus>
+      </div>
+      <div class="form-field">
+        <label for="password">Password</label>
+        <input id="password" type="password" name="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="button full-width">Log in</button>
+    </form>
+    <p class="auth-footer">New to Scoutly? <a href="{% url 'accounts.signup' %}">Create an account</a></p>
+  </div>
+</section>
+{% endblock %}

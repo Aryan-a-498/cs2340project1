@@ -1,14 +1,26 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>{{ template_data.title }}</title>
-</head>
-<body>
-  <h2>Sign Up</h2>
-  <form method="POST">
-    {% csrf_token %}
-    {{ template_data.form.as_p }}
-    <button type="submit">Sign Up</button>
-  </form>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block content %}
+<section class="auth-wrap">
+  <div class="auth-card card">
+    <p class="eyebrow">Get started</p>
+    <h1>Create your account</h1>
+    <p>Choose your role and start building your path.</p>
+    <form method="post">
+      {% csrf_token %}
+      {% if template_data.form.non_field_errors %}
+        <div class="form-errors">{{ template_data.form.non_field_errors }}</div>
+      {% endif %}
+      {% for field in template_data.form %}
+        <div class="form-field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        </div>
+      {% endfor %}
+      <button type="submit" class="button full-width">Create account</button>
+    </form>
+    <p class="auth-footer">Already have an account? <a href="{% url 'accounts.login' %}">Log in</a></p>
+  </div>
+</section>
+{% endblock %}

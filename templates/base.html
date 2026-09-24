@@ -1,0 +1,56 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>{{ title|default:"Scoutly" }} · Scoutly</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="{% url 'home' %}" aria-label="Scoutly home">
+        <span>Scoutly</span>
+        <span class="brand-period" aria-hidden="true">.</span>
+      </a>
+      <nav class="site-nav" aria-label="Main navigation">
+        {% if user.is_authenticated %}
+          {% if user.role == 'job_seeker' %}
+            <a href="{% url 'jobs.explore' %}">Explore jobs</a>
+            <a href="{% url 'jobs.cart' %}">Job cart</a>
+          {% else %}
+            <a href="{% url 'jobs.my_job_postings' %}">My postings</a>
+          {% endif %}
+          <form method="post" action="{% url 'accounts.logout' %}" class="nav-form">
+            {% csrf_token %}
+            <button type="submit" class="nav-link-button">Log out</button>
+          </form>
+        {% else %}
+          <a href="{% url 'accounts.login' %}">Log in</a>
+          <a class="button button-small" href="{% url 'accounts.signup' %}">Create account</a>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    {% if messages %}
+      <div class="messages" aria-live="polite">
+        {% for message in messages %}
+          <div class="message">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-shell">Find work that fits your life.</div>
+  </footer>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

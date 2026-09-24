@@ -1,5 +1,5 @@
 ## Prerequisites
-- Python 3.11+
+- Python 3.11 or 3.12 (the Python versions supported by the pinned Django 5.0 release)
 - pip
 
 ## Setup Instructions
