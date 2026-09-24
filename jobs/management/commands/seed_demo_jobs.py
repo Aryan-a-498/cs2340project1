@@ -1,7 +1,10 @@
 from django.core.management.base import BaseCommand
 
-from accounts.models import User
-from jobs.models import JobPosting, Skill
+from accounts.models import JobSeekerProfile, User
+from jobs.models import JobApplication, JobPosting, Skill
+
+
+DEMO_PASSWORD = 'ScoutlyDemo123!'
 
 
 DEMO_JOBS = [
@@ -71,9 +74,84 @@ DEMO_JOBS = [
     },
 ]
 
+DEMO_APPLICANTS = [
+    {
+        'username': 'demo_maya',
+        'first_name': 'Maya',
+        'last_name': 'Chen',
+        'email': 'maya@example.com',
+        'location': 'Midtown Atlanta, GA',
+        'latitude': 33.7810,
+        'longitude': -84.3880,
+        'skills': ['Python', 'Django', 'Git'],
+        'applications': ['Junior Software Engineer', 'Data Analyst'],
+        'note': 'I enjoy building clear, reliable tools and collaborating with small product teams.',
+    },
+    {
+        'username': 'demo_jordan',
+        'first_name': 'Jordan',
+        'last_name': 'Brooks',
+        'email': 'jordan@example.com',
+        'location': 'Midtown Atlanta, GA',
+        'latitude': 33.7830,
+        'longitude': -84.3860,
+        'skills': ['Communication', 'Project Management', 'Excel'],
+        'applications': ['Product Coordinator', 'Operations Analyst'],
+        'note': 'My internship experience taught me how to keep cross-functional work organized and moving.',
+    },
+    {
+        'username': 'demo_avery',
+        'first_name': 'Avery',
+        'last_name': 'Patel',
+        'email': 'avery@example.com',
+        'location': 'Decatur, GA',
+        'latitude': 33.7748,
+        'longitude': -84.2963,
+        'skills': ['Figma', 'User Research', 'HTML'],
+        'applications': ['UX Designer', 'Frontend Developer'],
+        'note': 'I care about accessible interfaces and turning research findings into practical designs.',
+    },
+    {
+        'username': 'demo_sam',
+        'first_name': 'Sam',
+        'last_name': 'Rivera',
+        'email': 'sam@example.com',
+        'location': 'Decatur, GA',
+        'latitude': 33.7760,
+        'longitude': -84.2940,
+        'skills': ['JavaScript', 'HTML', 'CSS'],
+        'applications': ['Frontend Developer'],
+        'note': 'I have built responsive interfaces for student organizations and local nonprofits.',
+    },
+    {
+        'username': 'demo_taylor',
+        'first_name': 'Taylor',
+        'last_name': 'Morgan',
+        'email': 'taylor@example.com',
+        'location': 'Buckhead Atlanta, GA',
+        'latitude': 33.8480,
+        'longitude': -84.3700,
+        'skills': ['Python', 'SQL', 'Data Analysis'],
+        'applications': ['Data Analyst', 'QA Analyst'],
+        'note': 'I like finding the story behind a dataset and explaining it in a way teams can act on.',
+    },
+    {
+        'username': 'demo_casey',
+        'first_name': 'Casey',
+        'last_name': 'Nguyen',
+        'email': 'casey@example.com',
+        'location': 'Marietta, GA',
+        'latitude': 33.9526,
+        'longitude': -84.5499,
+        'skills': ['Communication', 'Python', 'Testing'],
+        'applications': ['Support Engineer', 'QA Analyst'],
+        'note': 'I bring a patient support mindset along with hands-on technical troubleshooting experience.',
+    },
+]
+
 
 class Command(BaseCommand):
-    help = 'Create reusable Atlanta-area demo jobs for local development.'
+    help = 'Create reusable Scoutly demo jobs and applications.'
 
     def handle(self, *args, **options):
         recruiter = User.objects.filter(
@@ -88,12 +166,12 @@ class Command(BaseCommand):
         elif recruiter.username == 'pathway_demo_recruiter':
             recruiter.username = 'scoutly_demo_recruiter'
             recruiter.save(update_fields=['username'])
-        if recruiter_created:
-            recruiter.set_unusable_password()
-            recruiter.save(update_fields=['password'])
+        recruiter.set_password(DEMO_PASSWORD)
+        recruiter.save(update_fields=['password'])
 
         created_count = 0
         updated_count = 0
+        jobs_by_title = {}
         for job_data in DEMO_JOBS:
             skill_names = job_data['skills']
             job, created = JobPosting.objects.update_or_create(
@@ -108,9 +186,49 @@ class Command(BaseCommand):
             )
             skills = [Skill.objects.get_or_create(name=name)[0] for name in skill_names]
             job.skills_required.set(skills)
+            jobs_by_title[job.title] = job
             created_count += int(created)
             updated_count += int(not created)
 
+        application_count = 0
+        for applicant_data in DEMO_APPLICANTS:
+            user, _ = User.objects.update_or_create(
+                username=applicant_data['username'],
+                defaults={
+                    'first_name': applicant_data['first_name'],
+                    'last_name': applicant_data['last_name'],
+                    'email': applicant_data['email'],
+                    'role': User.Role.JOB_SEEKER,
+                },
+            )
+            user.set_password(DEMO_PASSWORD)
+            user.save(update_fields=['password'])
+            profile, _ = JobSeekerProfile.objects.update_or_create(
+                user=user,
+                defaults={
+                    'location': applicant_data['location'],
+                    'preferred_latitude': applicant_data['latitude'],
+                    'preferred_longitude': applicant_data['longitude'],
+                    'commute_radius_miles': 25,
+                },
+            )
+            skills = [
+                Skill.objects.get_or_create(name=name)[0]
+                for name in applicant_data['skills']
+            ]
+            profile.skills.set(skills)
+            for job_title in applicant_data['applications']:
+                JobApplication.objects.update_or_create(
+                    job=jobs_by_title[job_title],
+                    applicant=profile,
+                    defaults={'cover_note': applicant_data['note']},
+                )
+                application_count += 1
+
         self.stdout.write(self.style.SUCCESS(
-            f'Demo jobs ready: {created_count} created, {updated_count} updated.'
+            f'Demo data ready: {created_count} jobs created, '
+            f'{updated_count} jobs updated, {application_count} applications ready.'
         ))
+        self.stdout.write(
+            f'Recruiter login: scoutly_demo_recruiter / {DEMO_PASSWORD}'
+        )

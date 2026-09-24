@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<a class="back-link" href="{% url 'jobs.applications' application.job.id %}">← Back to applicants</a>
+<header class="page-heading review-heading">
+  <div>
+    <p class="eyebrow">Candidate review</p>
+    <h1>{{ candidate_name }}</h1>
+    <p>Applied for {{ application.job.title }} on {{ application.created_at|date:"F j, Y" }}.</p>
+  </div>
+  <span class="status-pill status-{{ application.status }}">{{ application.get_status_display }}</span>
+</header>
+
+<div class="review-layout">
+  <div class="review-main">
+    <section class="review-section card">
+      <p class="eyebrow">Candidate profile</p>
+      <dl class="profile-details">
+        <div><dt>Name</dt><dd>{{ candidate_name }}</dd></div>
+        <div><dt>Email</dt><dd>{% if candidate.user.email %}<a href="mailto:{{ candidate.user.email }}">{{ candidate.user.email }}</a>{% else %}Not provided{% endif %}</dd></div>
+        <div><dt>Location</dt><dd>{{ candidate.location|default:"Not provided" }}</dd></div>
+      </dl>
+      <h2>Skills</h2>
+      <div class="job-meta">
+        {% for skill in candidate_skills %}<span class="pill">{{ skill.name }}</span>{% empty %}<span class="muted-text">No skills listed</span>{% endfor %}
+      </div>
+    </section>
+
+    <section class="review-section card">
+      <p class="eyebrow">Application note</p>
+      {% if application.cover_note %}
+        <p class="cover-note">{{ application.cover_note|linebreaksbr }}</p>
+      {% else %}
+        <p class="muted-text">The candidate did not include a note.</p>
+      {% endif %}
+    </section>
+
+    <section class="review-section card">
+      <p class="eyebrow">Skills comparison</p>
+      <h2>{{ matched_skills|length }} of {{ required_skills|length }} required skills matched</h2>
+      <div class="skill-comparison">
+        {% for skill in required_skills %}
+          <span class="pill {% if skill in matched_skills %}matched-pill{% endif %}">{{ skill.name }}{% if skill in matched_skills %} ✓{% endif %}</span>
+        {% empty %}
+          <span class="muted-text">This job has no required skills listed.</span>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <aside class="review-sidebar card">
+    <p class="eyebrow">Review status</p>
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-field">
+        <label for="{{ status_form.status.id_for_label }}">Application status</label>
+        {{ status_form.status }}
+      </div>
+      <button type="submit" class="button full-width">Save status</button>
+    </form>
+    <hr>
+    <p class="eyebrow">Position</p>
+    <h2>{{ application.job.title }}</h2>
+    <p>{{ application.job.company_name }}<br>{{ application.job.location }}</p>
+  </aside>
+</div>
+{% endblock %}

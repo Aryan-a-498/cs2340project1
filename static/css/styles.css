@@ -127,7 +127,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 600; }
 
 .form-field { margin-bottom: 18px; }
 .form-field label { display: block; margin-bottom: 7px; font-size: 0.9rem; font-weight: 700; }
-.form-field input, .form-field select {
+.form-field input, .form-field select, .form-field textarea {
   width: 100%;
   min-height: 46px;
   padding: 10px 12px;
@@ -136,7 +136,9 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 600; }
   color: var(--ink);
   background: white;
 }
-.form-field input:focus, .form-field select:focus { outline: 3px solid rgba(23, 107, 82, 0.13); border-color: var(--brand); }
+.form-field textarea { resize: vertical; }
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus { outline: 3px solid rgba(23, 107, 82, 0.13); border-color: var(--brand); }
+.field-help { margin: 6px 0 0; color: var(--muted); font-size: 0.8rem; }
 .field-error, .form-errors { margin: 7px 0 0; color: #a43b31; font-size: 0.88rem; }
 .form-errors { margin-bottom: 18px; padding: 12px 14px; border-radius: 5px; background: #fff1ef; }
 .full-width { width: 100%; }
@@ -165,6 +167,8 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 600; }
 .pill { display: inline-flex; padding: 5px 9px; border-radius: 999px; color: #3c5149; background: var(--surface-soft); font-size: 0.8rem; font-weight: 650; }
 .distance-pill { color: var(--brand-dark); background: var(--brand-light); }
 .in-cart { color: var(--brand); font-size: 0.9rem; font-weight: 750; white-space: nowrap; }
+.job-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+.job-actions form { margin: 0; }
 
 .empty-state { padding: 48px 28px; text-align: center; }
 .empty-state h2 { margin: 0 0 8px; }
@@ -176,23 +180,97 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 600; }
 .cart-card h2 { margin: 0 0 5px; font-size: 1.45rem; }
 .cart-card .job-meta { margin: 14px 0 24px; }
 .cart-card form { margin-top: auto; }
+.cart-actions { display: grid; gap: 10px; margin-top: auto; }
+.cart-actions form { margin: 0; }
 
 .simple-list { display: grid; gap: 14px; }
 .simple-card { padding: 22px; }
 .simple-card h2 { margin: 0 0 5px; font-size: 1.4rem; }
 .simple-card p { margin: 0 0 14px; color: var(--muted); }
+.inline-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.back-link { display: inline-block; margin-bottom: 22px; font-weight: 700; }
+.narrow-page { width: min(900px, 100%); margin: 0 auto; }
+.application-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.8fr); gap: 22px; align-items: start; }
+.form-card, .application-summary { padding: 28px; }
+.form-card > h2, .application-summary h2 { margin: 0 0 6px; font-size: 1.55rem; }
+.form-card > p, .application-summary > p { color: var(--muted); }
+.form-card > p { margin: 0 0 24px; }
+.application-summary hr, .review-sidebar hr { margin: 24px 0; border: 0; border-top: 1px solid var(--line); }
+.muted-text { color: var(--muted); }
+
+.application-list { display: grid; gap: 12px; }
+.application-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 18px; align-items: center; padding: 20px; }
+.candidate-avatar { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 50%; color: var(--brand-dark); background: var(--brand-light); font-family: var(--font-display); font-size: 1.25rem; font-weight: 600; }
+.application-row-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.application-row h2 { margin: 0 0 3px; font-size: 1.28rem; }
+.application-row p { margin: 0 0 10px; color: var(--muted); font-size: 0.9rem; }
+.status-pill { display: inline-flex; align-items: center; width: fit-content; padding: 5px 10px; border-radius: 999px; color: #4e554f; background: var(--surface-soft); font-size: 0.78rem; font-weight: 750; white-space: nowrap; }
+.status-reviewing { color: #7a4b19; background: #f6e9d7; }
+.status-shortlisted { color: var(--brand-dark); background: var(--brand-light); }
+.status-not_selected { color: #7a3430; background: #f5e4e1; }
+
+.review-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; }
+.review-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 22px; align-items: start; }
+.review-main { display: grid; gap: 16px; }
+.review-section, .review-sidebar { padding: 26px; }
+.review-section h2, .review-sidebar h2 { margin: 0 0 14px; font-size: 1.35rem; }
+.review-sidebar { position: sticky; top: 94px; }
+.profile-details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0 0 26px; }
+.profile-details div { min-width: 0; }
+.profile-details dt { margin-bottom: 4px; color: var(--muted); font-size: 0.78rem; font-weight: 750; letter-spacing: 0.06em; text-transform: uppercase; }
+.profile-details dd { margin: 0; overflow-wrap: anywhere; }
+.cover-note { margin: 0; font-size: 1.03rem; line-height: 1.7; }
+.skill-comparison { display: flex; flex-wrap: wrap; gap: 8px; }
+.matched-pill { color: var(--brand-dark); background: var(--brand-light); }
+
+.map-page-heading { display: flex; align-items: end; justify-content: space-between; gap: 28px; }
+.map-filter { min-width: 250px; }
+.map-filter label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 0.78rem; font-weight: 750; text-transform: uppercase; }
+.map-filter select { width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); background: var(--surface); }
+.map-stat-row { display: grid; grid-template-columns: repeat(3, 1fr); margin-bottom: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.map-stat-row div { padding: 18px 22px; border-right: 1px solid var(--line); }
+.map-stat-row div:last-child { border-right: 0; }
+.map-stat-row strong, .map-stat-row span { display: block; }
+.map-stat-row strong { font-family: var(--font-display); font-size: 1.75rem; font-weight: 600; }
+.map-stat-row span { color: var(--muted); font-size: 0.82rem; }
+.applicant-map-card { overflow: hidden; padding: 8px; box-shadow: var(--shadow); }
+#applicant-map { z-index: 1; width: 100%; height: 500px; border-radius: 4px; background: #dfeae5; }
+.applicant-cluster-icon { display: grid; place-items: center; border: 4px solid rgba(255, 255, 255, 0.88); border-radius: 50%; color: white; background: var(--brand); box-shadow: 0 3px 12px rgba(22, 63, 51, 0.3); font-weight: 800; }
+.applicant-cluster-icon span { display: grid; width: 100%; height: 100%; place-items: center; }
+.compact-application-list { display: grid; gap: 8px; }
+.compact-application { display: grid; grid-template-columns: 1fr 1fr auto; align-items: center; gap: 20px; padding: 16px 18px; color: var(--ink); }
+.compact-application:hover { color: var(--ink); border-color: #aeb8b1; }
+.compact-application span { min-width: 0; }
+.compact-application strong, .compact-application small { display: block; }
+.compact-application small { margin-top: 2px; color: var(--muted); }
 
 @media (max-width: 800px) {
   .explore-layout { grid-template-columns: 1fr; }
   .preference-card { position: static; }
   .cart-grid { grid-template-columns: 1fr; }
   .job-card { align-items: flex-start; flex-direction: column; }
+  .job-actions { justify-content: flex-start; }
+  .application-layout, .review-layout { grid-template-columns: 1fr; }
+  .review-sidebar { position: static; }
+  .map-page-heading { align-items: stretch; flex-direction: column; }
+  .map-filter { min-width: 0; }
 }
 
 @media (max-width: 560px) {
   .nav-shell, .page-shell, .footer-shell { width: min(100% - 26px, 1120px); }
-  .site-nav { gap: 14px; font-size: 0.88rem; }
+  .nav-shell { align-items: flex-start; padding: 16px 0; }
+  .site-nav { justify-content: flex-end; flex-wrap: wrap; gap: 10px 14px; font-size: 0.84rem; }
   .page-shell { padding-top: 34px; }
   .auth-card { padding: 25px; }
   #job-map { height: 340px; }
+  #applicant-map { height: 380px; }
+  .application-row { grid-template-columns: auto 1fr; }
+  .application-row > .button { grid-column: 1 / -1; }
+  .application-row-heading { display: block; }
+  .application-row-heading .status-pill { margin-bottom: 10px; }
+  .profile-details { grid-template-columns: 1fr; }
+  .map-stat-row div { padding: 14px; }
+  .compact-application { grid-template-columns: 1fr auto; }
+  .compact-application span:nth-child(2) { display: none; }
 }

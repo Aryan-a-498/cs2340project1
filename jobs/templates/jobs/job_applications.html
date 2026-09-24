@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<a class="back-link" href="{% url 'jobs.my_job_postings' %}">← Back to postings</a>
+<header class="page-heading">
+  <p class="eyebrow">Applications</p>
+  <h1>{{ job.title }}</h1>
+  <p>{{ applications|length }} applicant{{ applications|length|pluralize }} for {{ job.company_name }}.</p>
+</header>
+
+{% if applications %}
+  <div class="application-list">
+    {% for application in applications %}
+      <article class="application-row card">
+        <div class="candidate-avatar">{{ application.applicant.user.first_name|default:application.applicant.user.username|first|upper }}</div>
+        <div class="application-row-main">
+          <div class="application-row-heading">
+            <div>
+              <h2>{{ application.applicant.user.get_full_name|default:application.applicant.user.username }}</h2>
+              <p>{{ application.applicant.location|default:"Location not provided" }} · Applied {{ application.created_at|date:"M j, Y" }}</p>
+            </div>
+            <span class="status-pill status-{{ application.status }}">{{ application.get_status_display }}</span>
+          </div>
+          <div class="job-meta">
+            {% for skill in application.applicant.skills.all %}<span class="pill">{{ skill.name }}</span>{% empty %}<span class="muted-text">No skills listed</span>{% endfor %}
+          </div>
+        </div>
+        <a class="button button-secondary" href="{% url 'jobs.application_detail' job.id application.id %}">Review</a>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <section class="empty-state card">
+    <h2>No applications yet</h2>
+    <p>New applicants for this role will appear here.</p>
+  </section>
+{% endif %}
+{% endblock %}

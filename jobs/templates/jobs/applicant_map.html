@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+  crossorigin=""
+>
+{% endblock %}
+
+{% block content %}
+<header class="page-heading map-page-heading">
+  <div>
+    <p class="eyebrow">Talent distribution</p>
+    <h1>Applicant map</h1>
+    <p>See approximate areas where candidates for your roles are located.</p>
+  </div>
+  <form method="get" class="map-filter">
+    <label for="job-filter">Job posting</label>
+    <select id="job-filter" name="job" onchange="this.form.submit()">
+      <option value="">All postings</option>
+      {% for job in recruiter_jobs %}
+        <option value="{{ job.id }}" {% if selected_job.id == job.id %}selected{% endif %}>{{ job.title }}</option>
+      {% endfor %}
+    </select>
+  </form>
+</header>
+
+<div class="map-stat-row">
+  <div><strong>{{ applicant_count }}</strong><span>Total applicants</span></div>
+  <div><strong>{{ located_applicant_count }}</strong><span>Shown on map</span></div>
+  <div><strong>{{ clusters|length }}</strong><span>Location clusters</span></div>
+</div>
+
+<section class="applicant-map-card card">
+  <div id="applicant-map"></div>
+  <p class="map-hint">Locations are grouped into approximate areas to protect candidate privacy.</p>
+</section>
+
+<div class="results-heading">
+  <h2>{% if selected_job %}Applications for {{ selected_job.title }}{% else %}Recent applications{% endif %}</h2>
+  <span>{{ applications|length }} application{{ applications|length|pluralize }}</span>
+</div>
+
+{% if applications %}
+  <div class="compact-application-list">
+    {% for application in applications %}
+      <a class="compact-application card" href="{% url 'jobs.application_detail' application.job.id application.id %}">
+        <span>
+          <strong>{{ application.applicant.user.get_full_name|default:application.applicant.user.username }}</strong>
+          <small>{{ application.applicant.location|default:"Location not provided" }}</small>
+        </span>
+        <span>
+          <strong>{{ application.job.title }}</strong>
+          <small>{{ application.get_status_display }}</small>
+        </span>
+        <span aria-hidden="true">→</span>
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <section class="empty-state card">
+    <h2>No applicants to map yet</h2>
+    <p>Applications to your job postings will appear here.</p>
+  </section>
+{% endif %}
+
+{{ clusters|json_script:"applicant-clusters" }}
+{% endblock %}
+
+{% block extra_scripts %}
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""
+></script>
+<script>
+  const map = L.map('applicant-map').setView([33.749, -84.388], 10);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+
+  const clusters = JSON.parse(document.getElementById('applicant-clusters').textContent);
+  const clusterPoints = [];
+  clusters.forEach(function (cluster) {
+    const icon = L.divIcon({
+      className: 'applicant-cluster-icon',
+      html: `<span>${cluster.count}</span>`,
+      iconSize: [42, 42],
+      iconAnchor: [21, 21]
+    });
+    const marker = L.marker([cluster.latitude, cluster.longitude], {icon: icon}).addTo(map);
+    const popup = document.createElement('div');
+    const heading = document.createElement('strong');
+    heading.textContent = `${cluster.count} applicant${cluster.count === 1 ? '' : 's'} nearby`;
+    popup.append(heading);
+    cluster.applicants.forEach(function (applicant) {
+      const row = document.createElement('p');
+      const link = document.createElement('a');
+      link.href = applicant.url;
+      link.textContent = applicant.name;
+      row.append(link, document.createElement('br'), applicant.location);
+      popup.append(row);
+    });
+    marker.bindPopup(popup);
+    clusterPoints.push([cluster.latitude, cluster.longitude]);
+  });
+  if (clusterPoints.length) map.fitBounds(clusterPoints, {padding: [60, 60], maxZoom: 12});
+</script>
+{% endblock %}

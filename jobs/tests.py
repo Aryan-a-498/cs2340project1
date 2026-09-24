@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from accounts.models import JobSeekerProfile, User
-from .models import JobPosting
+from .models import JobApplication, JobPosting, Skill
 
 
 class JobSeekerJobTests(TestCase):
@@ -103,6 +103,34 @@ class JobSeekerJobTests(TestCase):
         )
         self.assertEqual(response.status_code, 405)
 
+    def test_job_seeker_can_apply_only_once(self):
+        response = self.client.post(
+            reverse('jobs.apply', args=[self.nearby_job.id]),
+            {'cover_note': 'I have experience building Django applications.'},
+        )
+
+        self.assertRedirects(response, reverse('jobs.explore'))
+        application = JobApplication.objects.get(
+            job=self.nearby_job,
+            applicant=self.profile,
+        )
+        self.assertEqual(
+            application.cover_note,
+            'I have experience building Django applications.',
+        )
+
+        self.client.post(
+            reverse('jobs.apply', args=[self.nearby_job.id]),
+            {'cover_note': 'A duplicate application.'},
+        )
+        self.assertEqual(
+            JobApplication.objects.filter(
+                job=self.nearby_job,
+                applicant=self.profile,
+            ).count(),
+            1,
+        )
+
     def test_recruiter_cannot_use_job_seeker_pages(self):
         self.client.force_login(self.recruiter)
         self.assertEqual(self.client.get(reverse('jobs.explore')).status_code, 403)
@@ -123,3 +151,141 @@ class DistanceTests(TestCase):
         )
 
         self.assertAlmostEqual(job.distance_from(0, 0), 69.1, places=1)
+
+
+class RecruiterApplicationTests(TestCase):
+    def setUp(self):
+        self.recruiter = User.objects.create_user(
+            username='recruiter',
+            password='password',
+            role=User.Role.RECRUITER,
+        )
+        self.other_recruiter = User.objects.create_user(
+            username='other-recruiter',
+            password='password',
+            role=User.Role.RECRUITER,
+        )
+        self.seeker = User.objects.create_user(
+            username='candidate',
+            first_name='Jamie',
+            last_name='Rivera',
+            email='jamie@example.com',
+            role=User.Role.JOB_SEEKER,
+        )
+        self.profile = JobSeekerProfile.objects.create(
+            user=self.seeker,
+            location='Midtown Atlanta, GA',
+            preferred_latitude=33.781,
+            preferred_longitude=-84.388,
+        )
+        self.python = Skill.objects.create(name='Python')
+        self.django = Skill.objects.create(name='Django')
+        self.profile.skills.add(self.python)
+        self.job = JobPosting.objects.create(
+            title='Junior Developer',
+            company_name='Scoutly Labs',
+            posted_by=self.recruiter,
+            location='Atlanta, GA',
+        )
+        self.job.skills_required.add(self.python, self.django)
+        self.application = JobApplication.objects.create(
+            job=self.job,
+            applicant=self.profile,
+            cover_note='I enjoy solving useful problems with Python.',
+        )
+        self.client.force_login(self.recruiter)
+
+    def test_recruiter_can_review_profile_and_application_together(self):
+        response = self.client.get(reverse(
+            'jobs.application_detail',
+            args=[self.job.id, self.application.id],
+        ))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Jamie Rivera')
+        self.assertContains(response, 'jamie@example.com')
+        self.assertContains(response, 'Midtown Atlanta, GA')
+        self.assertContains(response, self.application.cover_note)
+        self.assertEqual(response.context['matched_skills'], [self.python])
+
+    def test_recruiter_can_update_application_status(self):
+        response = self.client.post(
+            reverse(
+                'jobs.application_detail',
+                args=[self.job.id, self.application.id],
+            ),
+            {'status': JobApplication.Status.SHORTLISTED},
+        )
+
+        self.assertRedirects(response, reverse(
+            'jobs.application_detail',
+            args=[self.job.id, self.application.id],
+        ))
+        self.application.refresh_from_db()
+        self.assertEqual(
+            self.application.status,
+            JobApplication.Status.SHORTLISTED,
+        )
+
+    def test_recruiter_cannot_review_another_recruiters_application(self):
+        self.client.force_login(self.other_recruiter)
+        response = self.client.get(reverse(
+            'jobs.application_detail',
+            args=[self.job.id, self.application.id],
+        ))
+        self.assertEqual(response.status_code, 404)
+
+    def test_applicant_map_clusters_nearby_candidates(self):
+        second_user = User.objects.create_user(
+            username='second-candidate',
+            role=User.Role.JOB_SEEKER,
+        )
+        second_profile = JobSeekerProfile.objects.create(
+            user=second_user,
+            location='Midtown Atlanta, GA',
+            preferred_latitude=33.782,
+            preferred_longitude=-84.386,
+        )
+        JobApplication.objects.create(job=self.job, applicant=second_profile)
+
+        response = self.client.get(reverse('jobs.applicant_map'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['applicant_count'], 2)
+        self.assertEqual(response.context['located_applicant_count'], 2)
+        self.assertEqual(len(response.context['clusters']), 1)
+        self.assertEqual(response.context['clusters'][0]['count'], 2)
+
+    def test_applicant_map_only_includes_owned_job_applications(self):
+        other_job = JobPosting.objects.create(
+            title='Other Job',
+            company_name='Other Company',
+            posted_by=self.other_recruiter,
+        )
+        other_user = User.objects.create_user(
+            username='outside-candidate',
+            role=User.Role.JOB_SEEKER,
+        )
+        other_profile = JobSeekerProfile.objects.create(
+            user=other_user,
+            preferred_latitude=33.9,
+            preferred_longitude=-84.4,
+        )
+        JobApplication.objects.create(job=other_job, applicant=other_profile)
+
+        response = self.client.get(reverse('jobs.applicant_map'))
+        self.assertEqual(response.context['applicant_count'], 1)
+
+    def test_job_seeker_cannot_access_recruiter_application_pages(self):
+        self.client.force_login(self.seeker)
+        self.assertEqual(
+            self.client.get(reverse('jobs.applicant_map')).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.client.get(reverse(
+                'jobs.applications',
+                args=[self.job.id],
+            )).status_code,
+            403,
+        )

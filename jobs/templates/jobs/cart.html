@@ -17,10 +17,17 @@
           {% if job.distance_miles != None %}<span class="pill distance-pill">{{ job.distance_miles|floatformat:1 }} miles away</span>{% endif %}
           {% for skill in job.skills_required.all %}<span class="pill">{{ skill.name }}</span>{% endfor %}
         </div>
-        <form method="post" action="{% url 'jobs.remove_from_cart' job.id %}">
-          {% csrf_token %}
-          <button type="submit" class="button button-danger full-width">Remove from cart</button>
-        </form>
+        <div class="cart-actions">
+          {% if job.id in applied_job_ids %}
+            <span class="in-cart">Application submitted</span>
+          {% else %}
+            <a class="button full-width" href="{% url 'jobs.apply' job.id %}">Apply now</a>
+          {% endif %}
+          <form method="post" action="{% url 'jobs.remove_from_cart' job.id %}">
+            {% csrf_token %}
+            <button type="submit" class="button button-danger full-width">Remove from cart</button>
+          </form>
+        </div>
       </article>
     {% endfor %}
   </div>

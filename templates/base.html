@@ -24,6 +24,7 @@
             <a href="{% url 'jobs.cart' %}">Job cart</a>
           {% else %}
             <a href="{% url 'jobs.my_job_postings' %}">My postings</a>
+            <a href="{% url 'jobs.applicant_map' %}">Applicant map</a>
           {% endif %}
           <form method="post" action="{% url 'accounts.logout' %}" class="nav-form">
             {% csrf_token %}

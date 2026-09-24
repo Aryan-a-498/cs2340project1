@@ -12,8 +12,14 @@
     {% for job in job_postings %}
       <article class="simple-card card">
         <h2>{{ job.title }}</h2>
-        <p>{{ job.company_name }}{% if job.location %} · {{ job.location }}{% endif %}</p>
-        <a class="button button-secondary" href="{% url 'jobs.recommended_candidates' job.id %}">View candidates</a>
+        <p>
+          {{ job.company_name }}{% if job.location %} · {{ job.location }}{% endif %}
+          · {{ job.application_count }} applicant{{ job.application_count|pluralize }}
+        </p>
+        <div class="inline-actions">
+          <a class="button" href="{% url 'jobs.applications' job.id %}">Review applicants</a>
+          <a class="button button-secondary" href="{% url 'jobs.recommended_candidates' job.id %}">Skill recommendations</a>
+        </div>
       </article>
     {% endfor %}
   </div>

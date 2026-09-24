@@ -51,3 +51,41 @@ class JobPosting(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class JobApplication(models.Model):
+    class Status(models.TextChoices):
+        SUBMITTED = 'submitted', 'Submitted'
+        REVIEWING = 'reviewing', 'Reviewing'
+        SHORTLISTED = 'shortlisted', 'Shortlisted'
+        NOT_SELECTED = 'not_selected', 'Not selected'
+
+    job = models.ForeignKey(
+        JobPosting,
+        on_delete=models.CASCADE,
+        related_name='applications',
+    )
+    applicant = models.ForeignKey(
+        'accounts.JobSeekerProfile',
+        on_delete=models.CASCADE,
+        related_name='applications',
+    )
+    cover_note = models.TextField(blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.SUBMITTED,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['job', 'applicant'],
+                name='unique_job_application',
+            ),
+        ]
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.applicant} — {self.job}'

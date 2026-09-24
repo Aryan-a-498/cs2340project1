@@ -27,6 +27,12 @@
       {% if form.non_field_errors %}
         <div class="form-errors">{{ form.non_field_errors }}</div>
       {% endif %}
+      <div class="form-field">
+        <label for="{{ form.location.id_for_label }}">City or neighborhood</label>
+        {{ form.location }}
+        <p class="field-help">Recruiters see this label, not your exact map point.</p>
+        {% for error in form.location.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      </div>
       <div id="coordinate-status" class="coordinate-status">
         {% if profile.preferred_latitude != None %}
           Commute center selected
@@ -71,14 +77,21 @@
                 {% for skill in job.skills_required.all %}<span class="pill">{{ skill.name }}</span>{% endfor %}
               </div>
             </div>
-            {% if job.id in cart_job_ids %}
-              <span class="in-cart">In your cart</span>
-            {% else %}
-              <form method="post" action="{% url 'jobs.add_to_cart' job.id %}">
-                {% csrf_token %}
-                <button type="submit" class="button button-secondary">Add to cart</button>
-              </form>
-            {% endif %}
+            <div class="job-actions">
+              {% if job.id in applied_job_ids %}
+                <span class="in-cart">Application submitted</span>
+              {% else %}
+                <a class="button" href="{% url 'jobs.apply' job.id %}">Apply</a>
+              {% endif %}
+              {% if job.id in cart_job_ids %}
+                <span class="in-cart">In your cart</span>
+              {% else %}
+                <form method="post" action="{% url 'jobs.add_to_cart' job.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="button button-secondary">Add to cart</button>
+                </form>
+              {% endif %}
+            </div>
           </article>
         {% endfor %}
       </div>

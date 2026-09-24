@@ -7,24 +7,31 @@ from .models import JobSeekerProfile, User
 class CustomUserCreationForm(UserCreationForm):
     class Meta:
         model = User
-        fields = ('username', 'role')
+        fields = ('first_name', 'last_name', 'email', 'username', 'role')
 
 
 class CommutePreferenceForm(forms.ModelForm):
     class Meta:
         model = JobSeekerProfile
         fields = (
+            'location',
             'preferred_latitude',
             'preferred_longitude',
             'commute_radius_miles',
         )
         widgets = {
+            'location': forms.TextInput(
+                attrs={'placeholder': 'e.g. Midtown Atlanta, GA'}
+            ),
             'preferred_latitude': forms.HiddenInput(),
             'preferred_longitude': forms.HiddenInput(),
             'commute_radius_miles': forms.NumberInput(
                 attrs={'min': 1, 'max': 100, 'class': 'radius-input'}
             ),
         }
+
+    def clean_location(self):
+        return self.cleaned_data['location'].strip()
 
     def clean(self):
         cleaned_data = super().clean()

@@ -23,6 +23,7 @@ class JobSeekerProfile(models.Model):
         related_name='job_seekers',
         blank=True,
     )
+    location = models.CharField(max_length=255, blank=True)
     preferred_latitude = models.FloatField(null=True, blank=True)
     preferred_longitude = models.FloatField(null=True, blank=True)
     commute_radius_miles = models.PositiveIntegerField(

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="narrow-page">
+  <a class="back-link" href="{% url 'jobs.explore' %}">← Back to jobs</a>
+  <header class="page-heading">
+    <p class="eyebrow">Application</p>
+    <h1>{{ job.title }}</h1>
+    <p>{{ job.company_name }} · {{ job.location }}</p>
+  </header>
+
+  <div class="application-layout">
+    <section class="form-card card">
+      <h2>Introduce yourself</h2>
+      <p>A short, specific note helps the recruiter understand your interest.</p>
+      <form method="post">
+        {% csrf_token %}
+        <div class="form-field">
+          <label for="{{ form.cover_note.id_for_label }}">{{ form.cover_note.label }}</label>
+          {{ form.cover_note }}
+          {% for error in form.cover_note.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        </div>
+        <button type="submit" class="button full-width">Submit application</button>
+      </form>
+    </section>
+
+    <aside class="application-summary card">
+      <p class="eyebrow">Your profile</p>
+      <h2>{{ user.get_full_name|default:user.username }}</h2>
+      <p>{{ profile.location|default:"Location not added" }}</p>
+      <div class="job-meta">
+        {% for skill in profile.skills.all %}<span class="pill">{{ skill.name }}</span>{% empty %}<span class="muted-text">No skills added yet</span>{% endfor %}
+      </div>
+      <hr>
+      <p class="eyebrow">Role skills</p>
+      <div class="job-meta">
+        {% for skill in job.skills_required.all %}<span class="pill">{{ skill.name }}</span>{% endfor %}
+      </div>
+    </aside>
+  </div>
+</div>
+{% endblock %}
