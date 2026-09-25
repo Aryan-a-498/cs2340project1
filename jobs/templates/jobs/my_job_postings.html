@@ -16,7 +16,7 @@
       <article class="simple-card card">
         <h2>{{ job.title }}</h2>
         <p>
-          {{ job.company_name }}{% if job.location %} · {{ job.location }}{% endif %}
+          {{ job.company_name }}{% if job.location %} · {% if job.latitude != None and job.longitude != None %}<span title="Pinned on map">📍</span> {% endif %}{{ job.location }}{% endif %}
           · {{ job.application_count }} applicant{{ job.application_count|pluralize }}
         </p>
         <div class="inline-actions">

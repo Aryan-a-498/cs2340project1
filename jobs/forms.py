@@ -92,7 +92,7 @@ class JobPostingForm(forms.ModelForm):
         labels = {
             'company_name': 'Company',
             'description': 'Job description',
-            'location': 'City or neighborhood',
+            'location': 'Where is this role based?',
         }
         widgets = {
             'title': forms.TextInput(attrs={
@@ -109,7 +109,7 @@ class JobPostingForm(forms.ModelForm):
                 ),
             }),
             'location': forms.TextInput(attrs={
-                'placeholder': 'Atlanta, GA',
+                'placeholder': '123 Peachtree St NE, Atlanta, GA',
             }),
             'latitude': forms.HiddenInput(),
             'longitude': forms.HiddenInput(),

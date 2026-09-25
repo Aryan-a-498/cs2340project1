@@ -57,6 +57,8 @@
         <div class="form-field">
           <label for="{{ form.location.id_for_label }}">{{ form.location.label }}{% if form.location.field.required %} *{% endif %}</label>
           {{ form.location }}
+          <button type="button" id="find-on-map" class="button button-secondary">Find on map</button>
+          <p id="geocode-status" class="field-help" role="status"></p>
           {% for error in form.location.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
         </div>
         <div id="posting-map" aria-label="Select the job location">
@@ -123,13 +125,57 @@
       longitudeInput.value = longitude.toFixed(6);
       document.getElementById('coordinate-status').textContent = 'Job location selected';
       if (marker) map.removeLayer(marker);
-      marker = L.marker([latitude, longitude]).addTo(map);
+      marker = L.marker([latitude, longitude], {draggable: true}).addTo(map);
+      marker.on('dragend', function () { const position = marker.getLatLng(); latitudeInput.value = position.lat.toFixed(6); longitudeInput.value = position.lng.toFixed(6); });
     }
 
     if (hasLocation) selectLocation(startingLatitude, startingLongitude);
     map.on('click', function (event) {
       selectLocation(event.latlng.lat, event.latlng.lng);
     });
+
+    const locationInput = document.getElementById('id_location');
+    const findButton = document.getElementById('find-on-map');
+    const geocodeStatus = document.getElementById('geocode-status');
+
+    function findOnMap() {
+      const query = locationInput.value.trim();
+      if (!query) {
+        geocodeStatus.textContent = 'Type a city or address first.';
+        return;
+      }
+      geocodeStatus.textContent = 'Searching…';
+      findButton.disabled = true;
+      fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query))
+        .then(function (response) {
+          if (!response.ok) throw new Error('Search failed');
+          return response.json();
+        })
+        .then(function (results) {
+          if (results.length === 0) {
+            geocodeStatus.textContent = 'No match found. Click the map to place the pin instead.';
+            return;
+          }
+          const latitude = Number(results[0].lat);
+          const longitude = Number(results[0].lon);
+          selectLocation(latitude, longitude);
+          map.setView([latitude, longitude], 14);
+          geocodeStatus.textContent = 'Pin placed. Drag it to fine-tune.';
+        })
+        .catch(function () {
+          geocodeStatus.textContent = 'Search is unavailable. Click the map to place the pin instead.';
+        })
+        .finally(function () { findButton.disabled = false; });
+    }
+
+    findButton.addEventListener('click', findOnMap);
+    locationInput.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        findOnMap();
+      }
+    });
+
     requestAnimationFrame(function () { map.invalidateSize(true); });
     window.addEventListener('load', function () { map.invalidateSize(true); }, {once: true});
   }

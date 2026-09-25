@@ -190,6 +190,8 @@ h2, h3 { font-family: var(--font-ui); font-weight: 500; }
 .location-picker h2 { margin: 0 0 5px; font-size: 1rem; }
 .location-picker > p { margin: 0 0 18px; color: var(--muted); font-size: 0.8rem; }
 #posting-map { border: 1px solid var(--line); }
+.location-picker #find-on-map { margin-top: 10px; }
+.location-picker #geocode-status { min-height: 1.2em; margin-top: 8px; }
 .location-picker .coordinate-status { margin: 0; border: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); border-left: 1px solid var(--line); }
 .posting-actions { padding: 16px 24px; border-top: 1px solid var(--line); background: #fff; }
 .application-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.8fr); gap: 20px; align-items: start; }
