@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="narrow-page profile-page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">Candidate profile</p>
+      <h1>Show recruiters what you can do.</h1>
+      <p>Keep your skills and project work current so relevant teams can find you.</p>
+    </div>
+  </header>
+
+  <form method="post" class="profile-form card">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <section class="profile-identity">
+      <p class="eyebrow">Profile details</p>
+      <dl class="profile-details">
+        <div>
+          <dt>Name</dt>
+          <dd>{{ user.get_full_name|default:user.username }}</dd>
+        </div>
+        <div>
+          <dt>Email</dt>
+          <dd>{{ user.email|default:"Not provided" }}</dd>
+        </div>
+        <div>
+          <dt>Location</dt>
+          <dd>{{ profile.location|default:"Not provided" }}</dd>
+        </div>
+      </dl>
+      <p class="field-help">Update your public location from the commute preference on Explore jobs.</p>
+    </section>
+
+    <section class="profile-edit-fields">
+      <div class="form-field">
+        <label for="{{ form.skills.id_for_label }}">{{ form.skills.label }}</label>
+        {{ form.skills }}
+        {% if form.skills.help_text %}<p class="field-help">{{ form.skills.help_text }}</p>{% endif %}
+        {% for error in form.skills.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      </div>
+      <div class="form-field">
+        <label for="{{ form.projects.id_for_label }}">{{ form.projects.label }}</label>
+        {{ form.projects }}
+        {% if form.projects.help_text %}<p class="field-help">{{ form.projects.help_text }}</p>{% endif %}
+        {% for error in form.projects.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      </div>
+    </section>
+
+    <div class="profile-form-actions">
+      <button type="submit" class="button">Save profile</button>
+      <a class="button button-secondary" href="{% url 'jobs.explore' %}">Back to jobs</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

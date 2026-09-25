@@ -24,6 +24,12 @@
       <div class="job-meta">
         {% for skill in candidate_skills %}<span class="pill">{{ skill.name }}</span>{% empty %}<span class="muted-text">No skills listed</span>{% endfor %}
       </div>
+      <h2 class="profile-projects-heading">Projects</h2>
+      {% if candidate.projects %}
+        <p class="cover-note">{{ candidate.projects|linebreaksbr }}</p>
+      {% else %}
+        <p class="muted-text">No projects listed</p>
+      {% endif %}
     </section>
 
     <section class="review-section card">

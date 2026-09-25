@@ -12,10 +12,10 @@
         <div class="form-errors">{{ template_data.form.non_field_errors }}</div>
       {% endif %}
       {% for field in template_data.form %}
-        <div class="form-field">
+        <div class="form-field{% if field.name == 'company_name' %} recruiter-company-field{% endif %}">
           <label for="{{ field.id_for_label }}">{{ field.label }}</label>
           {{ field }}
-          {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
         </div>
       {% endfor %}
       <button type="submit" class="button full-width">Create account</button>
@@ -23,4 +23,18 @@
     <p class="auth-footer">Already have an account? <a href="{% url 'accounts.login' %}">Log in</a></p>
   </div>
 </section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const roleField = document.getElementById('id_role');
+  const companyField = document.querySelector('.recruiter-company-field');
+  if (roleField && companyField) {
+    function toggleCompanyField() {
+      companyField.hidden = roleField.value !== 'recruiter';
+    }
+    roleField.addEventListener('change', toggleCompanyField);
+    toggleCompanyField();
+  }
+</script>
 {% endblock %}

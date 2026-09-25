@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 
-from accounts.models import JobSeekerProfile, User
+from accounts.models import Company, JobSeekerProfile, User
 from .models import JobApplication, JobPosting, Skill
 
 
@@ -153,6 +153,130 @@ class DistanceTests(TestCase):
         self.assertAlmostEqual(job.distance_from(0, 0), 69.1, places=1)
 
 
+class RecruiterJobPostingTests(TestCase):
+    def setUp(self):
+        self.company = Company.objects.create(name='Scoutly Labs')
+        self.recruiter = User.objects.create_user(
+            username='recruiter',
+            password='password',
+            role=User.Role.RECRUITER,
+            company=self.company,
+        )
+        self.other_recruiter = User.objects.create_user(
+            username='other-recruiter',
+            password='password',
+            role=User.Role.RECRUITER,
+        )
+        self.seeker = User.objects.create_user(
+            username='seeker',
+            password='password',
+            role=User.Role.JOB_SEEKER,
+        )
+        self.client.force_login(self.recruiter)
+
+    def job_data(self, **overrides):
+        data = {
+            'title': 'Junior Django Developer',
+            'company_name': 'Tampered Labs',
+            'description': (
+                'Build internal Django tools for early-career hiring teams.'
+            ),
+            'location': 'Atlanta, GA',
+            'latitude': '33.749',
+            'longitude': '-84.388',
+            'required_skills': 'Python, Django, SQL',
+        }
+        data.update(overrides)
+        return data
+
+    def test_recruiter_can_post_a_job(self):
+        response = self.client.post(reverse('jobs.create'), self.job_data())
+
+        self.assertRedirects(response, reverse('jobs.my_job_postings'))
+        job = JobPosting.objects.get(title='Junior Django Developer')
+        self.assertEqual(job.posted_by, self.recruiter)
+        self.assertEqual(job.company_name, 'Scoutly Labs')
+        self.assertEqual(job.company, self.company)
+        self.assertEqual(
+            job.description,
+            'Build internal Django tools for early-career hiring teams.',
+        )
+        self.assertEqual(
+            set(job.skills_required.values_list('name', flat=True)),
+            {'Python', 'Django', 'SQL'},
+        )
+
+    def test_recruiter_can_edit_an_owned_job(self):
+        python = Skill.objects.create(name='Python')
+        job = JobPosting.objects.create(
+            title='Developer',
+            company_name='Scoutly Labs',
+            posted_by=self.recruiter,
+            location='Atlanta, GA',
+            latitude=33.749,
+            longitude=-84.388,
+        )
+        job.skills_required.add(python)
+
+        response = self.client.post(
+            reverse('jobs.edit', args=[job.id]),
+            self.job_data(
+                title='Software Engineer',
+                description='Own integrations for recruiter workflows.',
+                required_skills='Python, REST APIs',
+            ),
+        )
+
+        self.assertRedirects(response, reverse('jobs.my_job_postings'))
+        job.refresh_from_db()
+        self.assertEqual(job.title, 'Software Engineer')
+        self.assertEqual(job.company_name, 'Scoutly Labs')
+        self.assertEqual(job.company, self.company)
+        self.assertEqual(
+            job.description,
+            'Own integrations for recruiter workflows.',
+        )
+        self.assertEqual(
+            set(job.skills_required.values_list('name', flat=True)),
+            {'Python', 'REST APIs'},
+        )
+
+    def test_recruiter_cannot_edit_another_recruiters_job(self):
+        job = JobPosting.objects.create(
+            title='Private posting',
+            company_name='Other Company',
+            posted_by=self.other_recruiter,
+        )
+
+        response = self.client.get(reverse('jobs.edit', args=[job.id]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_job_seeker_cannot_create_or_edit_jobs(self):
+        job = JobPosting.objects.create(
+            title='Developer',
+            company_name='Scoutly Labs',
+            posted_by=self.recruiter,
+        )
+        self.client.force_login(self.seeker)
+
+        self.assertEqual(self.client.get(reverse('jobs.create')).status_code, 403)
+        self.assertEqual(
+            self.client.get(reverse('jobs.edit', args=[job.id])).status_code,
+            403,
+        )
+
+    def test_job_requires_a_map_location(self):
+        response = self.client.post(
+            reverse('jobs.create'),
+            self.job_data(latitude='', longitude=''),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Choose the job location on the map.')
+        self.assertFalse(JobPosting.objects.exists())
+
+
 class RecruiterApplicationTests(TestCase):
     def setUp(self):
         self.recruiter = User.objects.create_user(
@@ -175,6 +299,7 @@ class RecruiterApplicationTests(TestCase):
         self.profile = JobSeekerProfile.objects.create(
             user=self.seeker,
             location='Midtown Atlanta, GA',
+            projects='Built a transit analytics dashboard with Django.',
             preferred_latitude=33.781,
             preferred_longitude=-84.388,
         )
@@ -205,6 +330,7 @@ class RecruiterApplicationTests(TestCase):
         self.assertContains(response, 'Jamie Rivera')
         self.assertContains(response, 'jamie@example.com')
         self.assertContains(response, 'Midtown Atlanta, GA')
+        self.assertContains(response, 'transit analytics dashboard')
         self.assertContains(response, self.application.cover_note)
         self.assertEqual(response.context['matched_skills'], [self.python])
 
@@ -289,3 +415,102 @@ class RecruiterApplicationTests(TestCase):
             )).status_code,
             403,
         )
+
+
+class CandidateSearchTests(TestCase):
+    def setUp(self):
+        self.recruiter = User.objects.create_user(
+            username='recruiter',
+            password='password',
+            role=User.Role.RECRUITER,
+        )
+        self.atlanta_user = User.objects.create_user(
+            username='atlanta-candidate',
+            first_name='Avery',
+            last_name='Morgan',
+            email='avery@example.com',
+            role=User.Role.JOB_SEEKER,
+        )
+        self.atlanta_profile = JobSeekerProfile.objects.create(
+            user=self.atlanta_user,
+            location='Midtown Atlanta, GA',
+            projects=(
+                'Built a transit analytics dashboard with React and Django.'
+            ),
+        )
+        self.seattle_user = User.objects.create_user(
+            username='seattle-candidate',
+            first_name='Jordan',
+            last_name='Lee',
+            role=User.Role.JOB_SEEKER,
+        )
+        self.seattle_profile = JobSeekerProfile.objects.create(
+            user=self.seattle_user,
+            location='Seattle, WA',
+            projects='Created an iOS garden journal using Swift.',
+        )
+        python = Skill.objects.create(name='Python')
+        django = Skill.objects.create(name='Django')
+        swift = Skill.objects.create(name='Swift')
+        self.atlanta_profile.skills.add(python, django)
+        self.seattle_profile.skills.add(swift)
+        self.client.force_login(self.recruiter)
+
+    def candidate_ids(self, response):
+        return set(response.context['candidates'].values_list('id', flat=True))
+
+    def test_candidate_directory_shows_all_job_seekers_by_default(self):
+        response = self.client.get(reverse('jobs.candidate_search'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            self.candidate_ids(response),
+            {self.atlanta_profile.id, self.seattle_profile.id},
+        )
+
+    def test_recruiter_can_filter_candidates_by_each_search_field(self):
+        skills_response = self.client.get(
+            reverse('jobs.candidate_search'),
+            {'skills': 'python'},
+        )
+        location_response = self.client.get(
+            reverse('jobs.candidate_search'),
+            {'location': 'seattle'},
+        )
+        projects_response = self.client.get(
+            reverse('jobs.candidate_search'),
+            {'projects': 'analytics'},
+        )
+
+        self.assertEqual(
+            self.candidate_ids(skills_response),
+            {self.atlanta_profile.id},
+        )
+        self.assertEqual(
+            self.candidate_ids(location_response),
+            {self.seattle_profile.id},
+        )
+        self.assertEqual(
+            self.candidate_ids(projects_response),
+            {self.atlanta_profile.id},
+        )
+
+    def test_combined_filters_and_comma_separated_terms_all_match(self):
+        response = self.client.get(reverse('jobs.candidate_search'), {
+            'skills': 'Python, Django',
+            'location': 'Atlanta',
+            'projects': 'analytics, React',
+        })
+
+        self.assertEqual(
+            self.candidate_ids(response),
+            {self.atlanta_profile.id},
+        )
+        self.assertTrue(response.context['has_filters'])
+
+    def test_job_seeker_cannot_search_candidates(self):
+        self.client.force_login(self.atlanta_user)
+
+        response = self.client.get(reverse('jobs.candidate_search'))
+
+        self.assertEqual(response.status_code, 403)

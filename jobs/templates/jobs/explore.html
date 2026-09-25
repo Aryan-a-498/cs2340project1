@@ -1,11 +1,10 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block extra_head %}
 <link
   rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-  crossorigin=""
+  href="{% static 'vendor/leaflet/leaflet.css' %}"
 >
 {% endblock %}
 
@@ -51,8 +50,10 @@
 
   <div>
     <section class="map-card card" aria-label="Commute map">
-      <div id="job-map"></div>
-      <p class="map-hint">Only jobs inside the green commute circle appear below.</p>
+      <div id="job-map" aria-label="Map of jobs and commute area">
+        <div class="map-state is-visible" role="status">Loading map…</div>
+      </div>
+      <p class="map-hint">Only jobs inside your commute area appear below.</p>
     </section>
 
     <div class="results-heading">
@@ -72,6 +73,9 @@
             <div>
               <h3>{{ job.title }}</h3>
               <p class="job-company">{{ job.company_name }} · {{ job.location }}</p>
+              {% if job.description %}
+                <p class="job-description-preview">{{ job.description|truncatewords:22 }}</p>
+              {% endif %}
               <div class="job-meta">
                 <span class="pill distance-pill">{{ job.distance_miles|floatformat:1 }} miles away</span>
                 {% for skill in job.skills_required.all %}<span class="pill">{{ skill.name }}</span>{% endfor %}
@@ -109,7 +113,7 @@
 
 {% block extra_scripts %}
 <script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  src="{% static 'vendor/leaflet/leaflet.js' %}"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
   crossorigin=""
 ></script>
@@ -117,12 +121,33 @@
   const savedLatitude = {% if profile.preferred_latitude != None %}{{ profile.preferred_latitude }}{% else %}33.749{% endif %};
   const savedLongitude = {% if profile.preferred_longitude != None %}{{ profile.preferred_longitude }}{% else %}-84.388{% endif %};
   const hasSavedCenter = {% if profile.preferred_latitude != None %}true{% else %}false{% endif %};
+  const mapElement = document.getElementById('job-map');
+  if (typeof L === 'undefined') {
+    mapElement.innerHTML = '<div class="map-state is-visible" role="status">The map could not start. Reload this page to try again.</div>';
+  } else {
+  mapElement.innerHTML = '';
+  const mapStatus = document.createElement('div');
+  mapStatus.className = 'map-state';
+  mapStatus.setAttribute('role', 'status');
+  mapElement.append(mapStatus);
   const map = L.map('job-map').setView([savedLatitude, savedLongitude], hasSavedCenter ? 11 : 10);
 
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  const tileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-  }).addTo(map);
+  });
+  let loadedTiles = 0;
+  tileLayer.on('tileload', function () {
+    loadedTiles += 1;
+    mapStatus.classList.remove('is-visible');
+  });
+  map.addLayer(tileLayer);
+  window.setTimeout(function () {
+    if (loadedTiles === 0) {
+      mapStatus.textContent = 'Map imagery is unavailable. You can still click to select a location.';
+      mapStatus.classList.add('is-visible');
+    }
+  }, 4500);
 
   const latitudeInput = document.getElementById('id_preferred_latitude');
   const longitudeInput = document.getElementById('id_preferred_longitude');
@@ -137,8 +162,8 @@
     centerMarker = L.marker([latitude, longitude]).addTo(map).bindPopup('Your commute starts here');
     radiusCircle = L.circle([latitude, longitude], {
       radius: Number(radiusInput.value || 10) * 1609.344,
-      color: '#176b52',
-      fillColor: '#69b99d',
+      color: '#16765f',
+      fillColor: '#5fb59a',
       fillOpacity: 0.17,
       weight: 2
     }).addTo(map);
@@ -170,5 +195,8 @@
       .addTo(map)
       .bindPopup(popup);
   });
+  requestAnimationFrame(function () { map.invalidateSize(true); });
+  window.addEventListener('load', function () { map.invalidateSize(true); }, {once: true});
+  }
 </script>
 {% endblock %}

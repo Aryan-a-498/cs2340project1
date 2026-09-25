@@ -8,7 +8,12 @@ from django.views.decorators.http import require_http_methods, require_POST
 
 from accounts.forms import CommutePreferenceForm
 from accounts.models import JobSeekerProfile, User
-from .forms import ApplicationStatusForm, JobApplicationForm
+from .forms import (
+    ApplicationStatusForm,
+    CandidateSearchForm,
+    JobApplicationForm,
+    JobPostingForm,
+)
 from .models import JobApplication, JobPosting
 
 
@@ -45,6 +50,10 @@ def _nearby_jobs(profile):
 
 def _display_name(user):
     return user.get_full_name() or user.username
+
+
+def _recruiter_only(request):
+    return request.user.role == User.Role.RECRUITER
 
 
 @login_required
@@ -307,6 +316,109 @@ def recommended_candidates(request, job_id):
         'title': 'Recommended Candidates',
         'job': job,
         'candidates': job.recommended_candidates(),
+    })
+
+
+@login_required
+def candidate_search(request):
+    if request.user.role != User.Role.RECRUITER:
+        return HttpResponseForbidden('Only recruiters can search candidates.')
+
+    form = CandidateSearchForm(request.GET or None)
+    candidates = JobSeekerProfile.objects.filter(
+        user__role=User.Role.JOB_SEEKER,
+    ).select_related('user').prefetch_related('skills').order_by(
+        'user__last_name',
+        'user__first_name',
+        'user__username',
+    )
+    has_filters = False
+
+    if form.is_valid():
+        skill_terms = form.cleaned_data['skills']
+        project_terms = form.cleaned_data['projects']
+        location = form.cleaned_data['location']
+        has_filters = bool(skill_terms or project_terms or location)
+
+        for skill_term in skill_terms:
+            candidates = candidates.filter(
+                skills__name__icontains=skill_term,
+            )
+        if location:
+            candidates = candidates.filter(location__icontains=location)
+        for project_term in project_terms:
+            candidates = candidates.filter(projects__icontains=project_term)
+
+    candidates = candidates.distinct()
+    return render(request, 'jobs/candidate_search.html', {
+        'title': 'Candidate Search',
+        'form': form,
+        'candidates': candidates,
+        'has_filters': has_filters,
+    })
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def create_job_posting(request):
+    if not _recruiter_only(request):
+        return HttpResponseForbidden('Only recruiters can post job roles.')
+
+    if request.method == 'POST':
+        form = JobPostingForm(request.POST, recruiter=request.user)
+        if form.is_valid():
+            job_posting = form.save(commit=False)
+            job_posting.posted_by = request.user
+            if request.user.company_id:
+                job_posting.company = request.user.company
+                job_posting.company_name = request.user.company.name
+            job_posting.save()
+            form.save_skills(job_posting)
+            messages.success(request, f'{job_posting.title} was posted.')
+            return redirect('jobs.my_job_postings')
+    else:
+        form = JobPostingForm(recruiter=request.user)
+
+    return render(request, 'jobs/job_posting_form.html', {
+        'title': 'Post a Job',
+        'form': form,
+        'job_posting': None,
+    })
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def edit_job_posting(request, job_id):
+    if not _recruiter_only(request):
+        return HttpResponseForbidden('Only recruiters can edit job roles.')
+    job_posting = get_object_or_404(
+        JobPosting.objects.prefetch_related('skills_required'),
+        id=job_id,
+        posted_by=request.user,
+    )
+
+    if request.method == 'POST':
+        form = JobPostingForm(
+            request.POST,
+            instance=job_posting,
+            recruiter=request.user,
+        )
+        if form.is_valid():
+            job_posting = form.save(commit=False)
+            if request.user.company_id:
+                job_posting.company = request.user.company
+                job_posting.company_name = request.user.company.name
+            job_posting.save()
+            form.save_skills(job_posting)
+            messages.success(request, f'{job_posting.title} was updated.')
+            return redirect('jobs.my_job_postings')
+    else:
+        form = JobPostingForm(instance=job_posting, recruiter=request.user)
+
+    return render(request, 'jobs/job_posting_form.html', {
+        'title': f'Edit {job_posting.title}',
+        'form': form,
+        'job_posting': job_posting,
     })
 
 

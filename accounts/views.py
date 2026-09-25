@@ -1,8 +1,11 @@
 from django.shortcuts import render, redirect
+from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseForbidden
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .forms import CustomUserCreationForm
+from .forms import CustomUserCreationForm, JobSeekerProfileForm
 from .models import JobSeekerProfile, User
 
 
@@ -52,3 +55,26 @@ def login(request):
 def logout(request):
     auth_logout(request)
     return redirect('accounts.login')
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def job_seeker_profile(request):
+    if request.user.role != User.Role.JOB_SEEKER:
+        return HttpResponseForbidden('Only job seekers have candidate profiles.')
+
+    profile, _created = JobSeekerProfile.objects.get_or_create(user=request.user)
+    if request.method == 'POST':
+        form = JobSeekerProfileForm(request.POST, instance=profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Your candidate profile was updated.')
+            return redirect('accounts.profile')
+    else:
+        form = JobSeekerProfileForm(instance=profile)
+
+    return render(request, 'accounts/profile.html', {
+        'title': 'My Profile',
+        'profile': profile,
+        'form': form,
+    })

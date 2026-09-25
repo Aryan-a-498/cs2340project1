@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<link
+  rel="stylesheet"
+  href="{% static 'vendor/leaflet/leaflet.css' %}"
+>
+{% endblock %}
+
+{% block content %}
+<div class="narrow-page">
+  <a class="back-link" href="{% url 'jobs.my_job_postings' %}">← Back to my postings</a>
+  <header class="page-heading posting-heading">
+    <h1>{% if job_posting %}Edit job role{% else %}Post a job role{% endif %}</h1>
+  </header>
+
+  <form method="post" class="form-card card job-posting-form" novalidate>
+    {% csrf_token %}
+    {{ form.latitude }}
+    {{ form.longitude }}
+
+    <div class="job-posting-layout">
+      <section class="role-fields">
+        <h2>Role details</h2>
+        <p>Fields marked with an asterisk are required.</p>
+        {% if form.non_field_errors %}
+          <div class="form-errors">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="form-field">
+          <label for="{{ form.title.id_for_label }}">{{ form.title.label }}{% if form.title.field.required %} *{% endif %}</label>
+          {{ form.title }}
+          {% for error in form.title.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="form-field">
+          <label for="{{ form.company_name.id_for_label }}">{{ form.company_name.label }}{% if form.company_name.field.required %} *{% endif %}</label>
+          {{ form.company_name }}
+          {% if form.company_name.help_text %}<p class="field-help">{{ form.company_name.help_text }}</p>{% endif %}
+          {% for error in form.company_name.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="form-field">
+          <label for="{{ form.description.id_for_label }}">{{ form.description.label }}{% if form.description.field.required %} *{% endif %}</label>
+          {{ form.description }}
+          {% for error in form.description.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="form-field">
+          <label for="{{ form.required_skills.id_for_label }}">{{ form.required_skills.label }}{% if form.required_skills.field.required %} *{% endif %}</label>
+          {{ form.required_skills }}
+          {% if form.required_skills.help_text %}<p class="field-help">{{ form.required_skills.help_text }}</p>{% endif %}
+          {% for error in form.required_skills.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        </div>
+      </section>
+
+      <section class="location-picker">
+        <h2>Job location *</h2>
+        <p>Click the map to place this opening. Candidates use this point to find roles within their commute.</p>
+        <div class="form-field">
+          <label for="{{ form.location.id_for_label }}">{{ form.location.label }}{% if form.location.field.required %} *{% endif %}</label>
+          {{ form.location }}
+          {% for error in form.location.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        </div>
+        <div id="posting-map" aria-label="Select the job location">
+          <div class="map-state is-visible" role="status">Loading map…</div>
+        </div>
+        <div id="coordinate-status" class="coordinate-status">
+          {% if form.latitude.value != None and form.longitude.value != None %}Job location selected{% else %}No map location selected yet{% endif %}
+        </div>
+      </section>
+    </div>
+
+    <div class="inline-actions posting-actions">
+      <button type="submit" class="button">{% if job_posting %}Save changes{% else %}Post job{% endif %}</button>
+      <a class="button button-secondary" href="{% url 'jobs.my_job_postings' %}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script
+  src="{% static 'vendor/leaflet/leaflet.js' %}"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""
+></script>
+<script>
+  const mapElement = document.getElementById('posting-map');
+  const latitudeInput = document.getElementById('id_latitude');
+  const longitudeInput = document.getElementById('id_longitude');
+
+  if (typeof L === 'undefined') {
+    mapElement.innerHTML = '<div class="map-state is-visible" role="status">The map could not start. Reload this page to try again.</div>';
+  } else {
+    mapElement.innerHTML = '';
+    const mapStatus = document.createElement('div');
+    mapStatus.className = 'map-state';
+    mapStatus.setAttribute('role', 'status');
+    mapElement.append(mapStatus);
+    const hasLocation = latitudeInput.value !== '' && longitudeInput.value !== '';
+    const startingLatitude = hasLocation ? Number(latitudeInput.value) : 33.749;
+    const startingLongitude = hasLocation ? Number(longitudeInput.value) : -84.388;
+    const map = L.map('posting-map').setView([startingLatitude, startingLongitude], hasLocation ? 12 : 10);
+
+    const tileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    });
+    let loadedTiles = 0;
+    tileLayer.on('tileload', function () {
+      loadedTiles += 1;
+      mapStatus.classList.remove('is-visible');
+    });
+    map.addLayer(tileLayer);
+    window.setTimeout(function () {
+      if (loadedTiles === 0) {
+        mapStatus.textContent = 'Map imagery is unavailable. You can still click to select a location.';
+        mapStatus.classList.add('is-visible');
+      }
+    }, 4500);
+
+    let marker;
+    function selectLocation(latitude, longitude) {
+      latitudeInput.value = latitude.toFixed(6);
+      longitudeInput.value = longitude.toFixed(6);
+      document.getElementById('coordinate-status').textContent = 'Job location selected';
+      if (marker) map.removeLayer(marker);
+      marker = L.marker([latitude, longitude]).addTo(map);
+    }
+
+    if (hasLocation) selectLocation(startingLatitude, startingLongitude);
+    map.on('click', function (event) {
+      selectLocation(event.latlng.lat, event.latlng.lng);
+    });
+    requestAnimationFrame(function () { map.invalidateSize(true); });
+    window.addEventListener('load', function () { map.invalidateSize(true); }, {once: true});
+  }
+</script>
+{% endblock %}

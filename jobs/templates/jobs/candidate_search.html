@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header class="page-heading">
+  <div>
+    <p class="eyebrow">Talent directory</p>
+    <h1>Search candidates</h1>
+    <p>Find people whose experience, location, and work align with your open roles.</p>
+  </div>
+</header>
+
+<section class="candidate-search-panel card" aria-label="Candidate filters">
+  <form method="get">
+    <div class="candidate-filter-grid">
+      <div class="form-field">
+        <label for="{{ form.skills.id_for_label }}">{{ form.skills.label }}</label>
+        {{ form.skills }}
+        <p class="field-help">Separate required skills with commas.</p>
+      </div>
+      <div class="form-field">
+        <label for="{{ form.location.id_for_label }}">{{ form.location.label }}</label>
+        {{ form.location }}
+        <p class="field-help">Search by city, state, or neighborhood.</p>
+      </div>
+      <div class="form-field">
+        <label for="{{ form.projects.id_for_label }}">{{ form.projects.label }}</label>
+        {{ form.projects }}
+        <p class="field-help">Separate project terms with commas.</p>
+      </div>
+    </div>
+    <div class="candidate-filter-actions">
+      <button type="submit" class="button">Search candidates</button>
+      {% if has_filters %}<a class="button button-secondary" href="{% url 'jobs.candidate_search' %}">Clear filters</a>{% endif %}
+    </div>
+  </form>
+</section>
+
+<div class="results-heading candidate-results-heading">
+  <h2>{% if has_filters %}Search results{% else %}All candidates{% endif %}</h2>
+  <span>{{ candidates|length }} candidate{{ candidates|length|pluralize }}</span>
+</div>
+
+{% if candidates %}
+  <div class="candidate-results">
+    {% for candidate in candidates %}
+      <article class="candidate-result card">
+        <header class="candidate-result-header">
+          <div class="candidate-avatar">{{ candidate.user.first_name|default:candidate.user.username|first|upper }}</div>
+          <div>
+            <h2>{{ candidate.user.get_full_name|default:candidate.user.username }}</h2>
+            <p>
+              {{ candidate.location|default:"Location not provided" }}
+              {% if candidate.user.email %} · <a href="mailto:{{ candidate.user.email }}">{{ candidate.user.email }}</a>{% endif %}
+            </p>
+          </div>
+        </header>
+
+        <div class="candidate-result-details">
+          <section>
+            <h3>Skills</h3>
+            <div class="job-meta">
+              {% for skill in candidate.skills.all %}
+                <span class="pill">{{ skill.name }}</span>
+              {% empty %}
+                <span class="muted-text">No skills listed</span>
+              {% endfor %}
+            </div>
+          </section>
+          <section>
+            <h3>Projects</h3>
+            {% if candidate.projects %}
+              <p>{{ candidate.projects|truncatewords:45|linebreaksbr }}</p>
+            {% else %}
+              <p class="muted-text">No projects listed</p>
+            {% endif %}
+          </section>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <section class="empty-state card">
+    <h2>No candidates match these filters</h2>
+    <p>Try a broader location or remove one of the skill or project terms.</p>
+    <a class="button button-secondary empty-action" href="{% url 'jobs.candidate_search' %}">View all candidates</a>
+  </section>
+{% endif %}
+{% endblock %}

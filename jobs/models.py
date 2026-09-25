@@ -14,6 +14,14 @@ class Skill(models.Model):
 class JobPosting(models.Model):
     title = models.CharField(max_length=255)
     company_name = models.CharField(max_length=255)
+    company = models.ForeignKey(
+        'accounts.Company',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='job_postings',
+    )
+    description = models.TextField(blank=True)
     skills_required = models.ManyToManyField(Skill, related_name='job_postings')
     posted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

@@ -1,11 +1,10 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block extra_head %}
 <link
   rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-  crossorigin=""
+  href="{% static 'vendor/leaflet/leaflet.css' %}"
 >
 {% endblock %}
 
@@ -34,7 +33,9 @@
 </div>
 
 <section class="applicant-map-card card">
-  <div id="applicant-map"></div>
+  <div id="applicant-map" aria-label="Map of applicant locations">
+    <div class="map-state is-visible" role="status">Loading map…</div>
+  </div>
   <p class="map-hint">Locations are grouped into approximate areas to protect candidate privacy.</p>
 </section>
 
@@ -71,16 +72,37 @@
 
 {% block extra_scripts %}
 <script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  src="{% static 'vendor/leaflet/leaflet.js' %}"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
   crossorigin=""
 ></script>
 <script>
+  const mapElement = document.getElementById('applicant-map');
+  if (typeof L === 'undefined') {
+    mapElement.innerHTML = '<div class="map-state is-visible" role="status">The map could not start. Reload this page to try again.</div>';
+  } else {
+  mapElement.innerHTML = '';
+  const mapStatus = document.createElement('div');
+  mapStatus.className = 'map-state';
+  mapStatus.setAttribute('role', 'status');
+  mapElement.append(mapStatus);
   const map = L.map('applicant-map').setView([33.749, -84.388], 10);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  const tileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-  }).addTo(map);
+  });
+  let loadedTiles = 0;
+  tileLayer.on('tileload', function () {
+    loadedTiles += 1;
+    mapStatus.classList.remove('is-visible');
+  });
+  map.addLayer(tileLayer);
+  window.setTimeout(function () {
+    if (loadedTiles === 0) {
+      mapStatus.textContent = 'Map imagery is unavailable. Applicant locations can’t be displayed right now.';
+      mapStatus.classList.add('is-visible');
+    }
+  }, 4500);
 
   const clusters = JSON.parse(document.getElementById('applicant-clusters').textContent);
   const clusterPoints = [];
@@ -108,5 +130,8 @@
     clusterPoints.push([cluster.latitude, cluster.longitude]);
   });
   if (clusterPoints.length) map.fitBounds(clusterPoints, {padding: [60, 60], maxZoom: 12});
+  requestAnimationFrame(function () { map.invalidateSize(true); });
+  window.addEventListener('load', function () { map.invalidateSize(true); }, {once: true});
+  }
 </script>
 {% endblock %}

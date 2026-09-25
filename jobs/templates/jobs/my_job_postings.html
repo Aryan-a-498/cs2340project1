@@ -1,10 +1,13 @@
 {% extends "base.html" %}
 
 {% block content %}
-<header class="page-heading">
-  <p class="eyebrow">Recruiter workspace</p>
-  <h1>My job postings</h1>
-  <p>Review the roles you manage and find candidates whose skills match.</p>
+<header class="page-heading heading-with-action">
+  <div>
+    <p class="eyebrow">Recruiter workspace</p>
+    <h1>My job postings</h1>
+    <p>Review the roles you manage and find candidates whose skills match.</p>
+  </div>
+  <a class="button" href="{% url 'jobs.create' %}">Post a job</a>
 </header>
 
 {% if job_postings %}
@@ -19,6 +22,7 @@
         <div class="inline-actions">
           <a class="button" href="{% url 'jobs.applications' job.id %}">Review applicants</a>
           <a class="button button-secondary" href="{% url 'jobs.recommended_candidates' job.id %}">Skill recommendations</a>
+          <a class="button button-secondary" href="{% url 'jobs.edit' job.id %}">Edit role</a>
         </div>
       </article>
     {% endfor %}
@@ -26,7 +30,8 @@
 {% else %}
   <section class="empty-state card">
     <h2>No postings yet</h2>
-    <p>Your job postings will appear here.</p>
+    <p>Post your first role so candidates can find and apply to it.</p>
+    <a class="button empty-action" href="{% url 'jobs.create' %}">Post a job</a>
   </section>
 {% endif %}
 {% endblock %}

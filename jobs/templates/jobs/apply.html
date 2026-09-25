@@ -25,6 +25,13 @@
     </section>
 
     <aside class="application-summary card">
+      <p class="eyebrow">Role overview</p>
+      <h2>{{ job.title }}</h2>
+      <p>{{ job.company_name }}<br>{{ job.location }}</p>
+      {% if job.description %}
+        <p class="job-description">{{ job.description|linebreaksbr }}</p>
+      {% endif %}
+      <hr>
       <p class="eyebrow">Your profile</p>
       <h2>{{ user.get_full_name|default:user.username }}</h2>
       <p>{{ profile.location|default:"Location not added" }}</p>
