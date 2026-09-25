@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 
 from accounts.models import JobSeekerProfile, User
 from jobs.models import JobApplication, JobPosting, Skill
+from messaging.models import Conversation, Message
 
 
 DEMO_PASSWORD = 'ScoutlyDemo123!'
@@ -149,6 +150,23 @@ DEMO_APPLICANTS = [
     },
 ]
 
+DEMO_STAGES = {
+    ('demo_maya', 'Junior Software Engineer'): JobApplication.Status.TECH_INTERVIEW,
+    ('demo_maya', 'Data Analyst'): JobApplication.Status.REVIEWING,
+    ('demo_jordan', 'Product Coordinator'): JobApplication.Status.BEHAVIORAL_INTERVIEW,
+    ('demo_avery', 'UX Designer'): JobApplication.Status.OFFER,
+    ('demo_avery', 'Frontend Developer'): JobApplication.Status.SHORTLISTED,
+    ('demo_sam', 'Frontend Developer'): JobApplication.Status.HIRED,
+    ('demo_taylor', 'QA Analyst'): JobApplication.Status.NOT_SELECTED,
+}
+
+DEMO_MESSAGES = [
+    ('recruiter', 'Hi Maya, thanks for applying to the Junior Software Engineer role. '
+                  'Are you available for a technical interview next week?'),
+    ('job_seeker', 'Hi! Yes, I would love to. Tuesday or Wednesday afternoon works best for me.'),
+    ('recruiter', 'Great, I will send over a Wednesday 2 PM slot shortly.'),
+]
+
 
 class Command(BaseCommand):
     help = 'Create reusable Scoutly demo jobs and applications.'
@@ -221,9 +239,26 @@ class Command(BaseCommand):
                 JobApplication.objects.update_or_create(
                     job=jobs_by_title[job_title],
                     applicant=profile,
-                    defaults={'cover_note': applicant_data['note']},
+                    defaults={
+                        'cover_note': applicant_data['note'],
+                        'status': DEMO_STAGES.get(
+                            (user.username, job_title),
+                            JobApplication.Status.SUBMITTED,
+                        ),
+                    },
                 )
                 application_count += 1
+
+        maya = User.objects.get(username='demo_maya')
+        conversation, created = Conversation.objects.get_or_create(
+            recruiter=recruiter,
+            job_seeker=maya,
+            defaults={'job': jobs_by_title['Junior Software Engineer']},
+        )
+        if created:
+            for sender_role, body in DEMO_MESSAGES:
+                sender = recruiter if sender_role == 'recruiter' else maya
+                Message.objects.create(conversation=conversation, sender=sender, body=body)
 
         self.stdout.write(self.style.SUCCESS(
             f'Demo data ready: {created_count} jobs created, '

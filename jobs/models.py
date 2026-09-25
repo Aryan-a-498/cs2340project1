@@ -2,6 +2,7 @@ from math import asin, cos, radians, sin, sqrt
 
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
 
 class Skill(models.Model):
@@ -58,6 +59,10 @@ class JobApplication(models.Model):
         SUBMITTED = 'submitted', 'Submitted'
         REVIEWING = 'reviewing', 'Reviewing'
         SHORTLISTED = 'shortlisted', 'Shortlisted'
+        TECH_INTERVIEW = 'tech_interview', 'Technical round'
+        BEHAVIORAL_INTERVIEW = 'behavioral_interview', 'Behavioral round'
+        OFFER = 'offer', 'Offer extended'
+        HIRED = 'hired', 'Hired'
         NOT_SELECTED = 'not_selected', 'Not selected'
 
     job = models.ForeignKey(
@@ -76,6 +81,7 @@ class JobApplication(models.Model):
         choices=Status.choices,
         default=Status.SUBMITTED,
     )
+    status_changed_at = models.DateTimeField(default=timezone.now)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -86,6 +92,14 @@ class JobApplication(models.Model):
             ),
         ]
         ordering = ['-created_at']
+
+    def move_to(self, status):
+        """Move the application to a new hiring stage."""
+        if status == self.status:
+            return
+        self.status = status
+        self.status_changed_at = timezone.now()
+        self.save(update_fields=['status', 'status_changed_at'])
 
     def __str__(self):
         return f'{self.applicant} — {self.job}'

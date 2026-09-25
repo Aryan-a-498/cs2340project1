@@ -289,3 +289,131 @@ class RecruiterApplicationTests(TestCase):
             )).status_code,
             403,
         )
+
+
+class PipelineTests(TestCase):
+    def setUp(self):
+        self.recruiter = User.objects.create_user(
+            username='recruiter',
+            password='password',
+            role=User.Role.RECRUITER,
+        )
+        self.other_recruiter = User.objects.create_user(
+            username='other-recruiter',
+            password='password',
+            role=User.Role.RECRUITER,
+        )
+        self.seeker = User.objects.create_user(
+            username='candidate',
+            first_name='Jamie',
+            last_name='Rivera',
+            role=User.Role.JOB_SEEKER,
+        )
+        self.profile = JobSeekerProfile.objects.create(user=self.seeker)
+        self.job = JobPosting.objects.create(
+            title='Junior Developer',
+            company_name='Scoutly Labs',
+            posted_by=self.recruiter,
+        )
+        self.application = JobApplication.objects.create(
+            job=self.job,
+            applicant=self.profile,
+        )
+        self.move_url = reverse(
+            'jobs.pipeline_move',
+            args=[self.job.id, self.application.id],
+        )
+        self.client.force_login(self.recruiter)
+
+    def test_pipeline_groups_applications_by_stage(self):
+        response = self.client.get(reverse('jobs.pipeline', args=[self.job.id]))
+
+        self.assertEqual(response.status_code, 200)
+        columns = {column['status']: column for column in response.context['columns']}
+        self.assertEqual(
+            [column['status'] for column in response.context['columns']],
+            JobApplication.Status.values,
+        )
+        self.assertEqual(
+            columns[JobApplication.Status.SUBMITTED]['applications'],
+            [self.application],
+        )
+        self.assertContains(response, 'Jamie Rivera')
+
+    def test_recruiter_can_move_application_with_form_post(self):
+        response = self.client.post(
+            self.move_url,
+            {'status': JobApplication.Status.TECH_INTERVIEW},
+        )
+
+        self.assertRedirects(response, reverse('jobs.pipeline', args=[self.job.id]))
+        self.application.refresh_from_db()
+        self.assertEqual(
+            self.application.status,
+            JobApplication.Status.TECH_INTERVIEW,
+        )
+
+    def test_move_returns_json_for_drag_and_drop(self):
+        old_changed_at = self.application.status_changed_at
+        response = self.client.post(
+            self.move_url,
+            {'status': JobApplication.Status.HIRED},
+            HTTP_ACCEPT='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'status': 'hired', 'label': 'Hired'})
+        self.application.refresh_from_db()
+        self.assertGreater(self.application.status_changed_at, old_changed_at)
+
+    def test_invalid_stage_is_rejected(self):
+        response = self.client.post(self.move_url, {'status': 'on_vacation'})
+
+        self.assertEqual(response.status_code, 400)
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, JobApplication.Status.SUBMITTED)
+
+    def test_review_page_status_change_updates_time_in_stage(self):
+        old_changed_at = self.application.status_changed_at
+        self.client.post(
+            reverse(
+                'jobs.application_detail',
+                args=[self.job.id, self.application.id],
+            ),
+            {'status': JobApplication.Status.OFFER},
+        )
+
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, JobApplication.Status.OFFER)
+        self.assertGreater(self.application.status_changed_at, old_changed_at)
+
+    def test_recruiter_cannot_use_another_recruiters_pipeline(self):
+        self.client.force_login(self.other_recruiter)
+
+        self.assertEqual(
+            self.client.get(reverse('jobs.pipeline', args=[self.job.id])).status_code,
+            404,
+        )
+        response = self.client.post(
+            self.move_url,
+            {'status': JobApplication.Status.HIRED},
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_job_seeker_cannot_access_pipeline(self):
+        self.client.force_login(self.seeker)
+
+        self.assertEqual(
+            self.client.get(reverse('jobs.pipeline', args=[self.job.id])).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.client.post(
+                self.move_url,
+                {'status': JobApplication.Status.HIRED},
+            ).status_code,
+            403,
+        )
+
+    def test_move_requires_post(self):
+        self.assertEqual(self.client.get(self.move_url).status_code, 405)

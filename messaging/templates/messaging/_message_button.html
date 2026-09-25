@@ -1,0 +1,12 @@
+{% comment %}
+  Reusable "Message" button for recruiter pages.
+  Usage: {% include "messaging/_message_button.html" with recipient=some_user job=some_job %}
+  Optional: button_class="button full-width" to change the button style.
+{% endcomment %}
+{% if user.role == 'recruiter' and recipient %}
+  <form method="post" action="{% url 'messaging.start' recipient.id %}" class="message-button-form">
+    {% csrf_token %}
+    {% if job %}<input type="hidden" name="job" value="{{ job.id }}">{% endif %}
+    <button type="submit" class="{{ button_class|default:'button button-small button-secondary' }}">Message</button>
+  </form>
+{% endif %}

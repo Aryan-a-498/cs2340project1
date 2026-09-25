@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/messaging.css' %}">
+{% endblock %}
+
+{% block content %}
+<header class="page-heading">
+  <p class="eyebrow">Messages</p>
+  <h1>Inbox</h1>
+  {% if user.role == 'recruiter' %}
+    <p>Talk with candidates directly — no personal email needed.</p>
+  {% else %}
+    <p>Recruiters who reach out about your applications will appear here.</p>
+  {% endif %}
+</header>
+
+{% if conversations %}
+  <div class="inbox-layout card{% if active_conversation %} has-active-thread{% endif %}">
+    <nav class="conversation-list" aria-label="Conversations">
+      {% for conversation in conversations %}
+        <a class="conversation-link{% if conversation.id == active_conversation.id %} is-active{% endif %}" href="{% url 'messaging.conversation' conversation.id %}">
+          <div class="candidate-avatar">{{ conversation.other_user.first_name|default:conversation.other_user.username|first|upper }}</div>
+          <span class="conversation-summary">
+            <strong>{{ conversation.other_name }}</strong>
+            {% if conversation.job %}<small>{{ conversation.job.title }}</small>{% endif %}
+            <span class="conversation-preview">{{ conversation.last_message_body|default:"No messages yet" }}</span>
+          </span>
+          {% if conversation.has_unread and conversation.id != active_conversation.id %}<span class="unread-dot" aria-label="Unread"></span>{% endif %}
+        </a>
+      {% endfor %}
+    </nav>
+
+    {% if active_conversation %}
+      <section class="thread" aria-labelledby="thread-heading">
+        <header class="thread-heading">
+          <a class="thread-back" href="{% url 'messaging.inbox' %}">← All messages</a>
+          <div>
+            <h2 id="thread-heading">{{ other_name }}</h2>
+            <p>
+              {% if active_conversation.job %}About {{ active_conversation.job.title }} at {{ active_conversation.job.company_name }}{% else %}{{ other_user.get_role_display }}{% endif %}
+            </p>
+          </div>
+        </header>
+
+        <ol class="thread-messages" id="thread-messages" data-updates-url="{% url 'messaging.conversation_updates' active_conversation.id %}">
+          {% for message in thread_messages %}
+            <li class="chat-message{% if message.sender_id == user.id %} is-mine{% endif %}" data-message-id="{{ message.id }}">
+              <p>{{ message.body }}</p>
+              <time datetime="{{ message.created_at|date:'c' }}">{{ message.created_at|date:"M j, g:i A" }}</time>
+            </li>
+          {% empty %}
+            <li class="thread-empty">
+              {% if user.role == 'recruiter' %}Start the conversation with a short introduction.{% else %}No messages yet.{% endif %}
+            </li>
+          {% endfor %}
+        </ol>
+
+        <form method="post" class="thread-form" id="thread-form">
+          {% csrf_token %}
+          <label class="visually-hidden" for="{{ form.body.id_for_label }}">{{ form.body.label }}</label>
+          {{ form.body }}
+          <button type="submit" class="button">Send</button>
+          {% if form.body.errors %}<p class="field-error">{{ form.body.errors.0 }}</p>{% endif %}
+        </form>
+      </section>
+    {% else %}
+      <section class="thread thread-placeholder">
+        <h2>Select a conversation</h2>
+        <p class="muted-text">Choose someone from the list to read and reply to messages.</p>
+      </section>
+    {% endif %}
+  </div>
+{% else %}
+  <section class="empty-state card">
+    <h2>No conversations yet</h2>
+    {% if user.role == 'recruiter' %}
+      <p>Use the Message button on a candidate's application or in your hiring pipeline to reach out.</p>
+      <a class="button empty-action" href="{% url 'jobs.my_job_postings' %}">Go to my postings</a>
+    {% else %}
+      <p>When a recruiter messages you about an opportunity, the conversation will appear here.</p>
+    {% endif %}
+  </section>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if active_conversation %}
+<script>
+  const thread = document.getElementById('thread-messages');
+  const threadForm = document.getElementById('thread-form');
+  thread.scrollTop = thread.scrollHeight;
+
+  threadForm.querySelector('textarea').addEventListener('keydown', function (event) {
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) threadForm.requestSubmit();
+  });
+
+  function lastMessageId() {
+    const messages = thread.querySelectorAll('[data-message-id]');
+    return messages.length ? messages[messages.length - 1].dataset.messageId : 0;
+  }
+
+  function addMessage(message) {
+    const item = document.createElement('li');
+    item.className = 'chat-message' + (message.is_mine ? ' is-mine' : '');
+    item.dataset.messageId = message.id;
+    const body = document.createElement('p');
+    body.textContent = message.body;
+    const time = document.createElement('time');
+    time.textContent = message.sent_at;
+    item.append(body, time);
+    thread.append(item);
+  }
+
+  setInterval(function () {
+    fetch(`${thread.dataset.updatesUrl}?after=${lastMessageId()}`)
+      .then(function (response) { return response.json(); })
+      .then(function (data) {
+        if (!data.messages.length) return;
+        const emptyNote = thread.querySelector('.thread-empty');
+        if (emptyNote) emptyNote.remove();
+        data.messages.forEach(addMessage);
+        thread.scrollTop = thread.scrollHeight;
+      })
+      .catch(function () {});
+  }, 5000);
+</script>
+{% endif %}
+{% endblock %}

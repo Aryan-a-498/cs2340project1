@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/pipeline.css' %}">
+{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'jobs.my_job_postings' %}">← Back to postings</a>
+<header class="page-heading map-page-heading">
+  <div>
+    <p class="eyebrow">Hiring pipeline</p>
+    <h1>{{ job.title }}</h1>
+    <p>Drag candidates between stages as they move through hiring at {{ job.company_name }}.</p>
+  </div>
+  <div class="inline-actions">
+    <a class="button button-secondary" href="{% url 'jobs.applications' job.id %}">List view</a>
+  </div>
+</header>
+
+{% if application_count %}
+  <div class="pipeline-board" id="pipeline-board">
+    {% for column in columns %}
+      <section class="pipeline-column pipeline-column-{{ column.status }}" data-status="{{ column.status }}" aria-labelledby="stage-{{ column.status }}">
+        <header class="pipeline-column-heading">
+          <h2 id="stage-{{ column.status }}">{{ column.label }}</h2>
+          <span class="pipeline-count">{{ column.applications|length }}</span>
+        </header>
+        <div class="pipeline-cards">
+          {% for application in column.applications %}
+            <article class="pipeline-card card" draggable="true" data-application-id="{{ application.id }}">
+              <div class="pipeline-card-heading">
+                <div class="candidate-avatar">{{ application.applicant.user.first_name|default:application.applicant.user.username|first|upper }}</div>
+                <div>
+                  <h3>{{ application.applicant.user.get_full_name|default:application.applicant.user.username }}</h3>
+                  <p>{{ application.applicant.location|default:"Location not provided" }}</p>
+                </div>
+              </div>
+              <div class="job-meta">
+                {% for skill in application.applicant.skills.all|slice:":3" %}<span class="pill">{{ skill.name }}</span>{% endfor %}
+              </div>
+              <p class="pipeline-card-time">In stage since {{ application.status_changed_at|date:"M j" }}</p>
+              <form method="post" action="{% url 'jobs.pipeline_move' job.id application.id %}" class="stage-form">
+                {% csrf_token %}
+                <label class="visually-hidden" for="stage-select-{{ application.id }}">Hiring stage</label>
+                <select id="stage-select-{{ application.id }}" name="status">
+                  {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if value == application.status %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+                <button type="submit" class="button button-small button-secondary stage-submit">Move</button>
+              </form>
+              <div class="pipeline-card-actions">
+                <a class="button button-small button-secondary" href="{% url 'jobs.application_detail' job.id application.id %}">Review</a>
+                {% include "messaging/_message_button.html" with recipient=application.applicant.user job=job %}
+              </div>
+            </article>
+          {% endfor %}
+          <p class="pipeline-empty"{% if column.applications %} hidden{% endif %}>No candidates here yet.</p>
+        </div>
+      </section>
+    {% endfor %}
+  </div>
+  <p class="map-hint">Tip: drag a card to another column, or use its stage menu.</p>
+{% else %}
+  <section class="empty-state card">
+    <h2>No applications yet</h2>
+    <p>New applicants for this role will appear in the pipeline.</p>
+  </section>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const board = document.getElementById('pipeline-board');
+  if (board) {
+    board.classList.add('pipeline-enhanced');
+    let draggedCard = null;
+
+    function updateColumn(column) {
+      const cardCount = column.querySelectorAll('.pipeline-card').length;
+      column.querySelector('.pipeline-count').textContent = cardCount;
+      column.querySelector('.pipeline-empty').hidden = cardCount > 0;
+    }
+
+    function moveCard(card, status) {
+      const form = card.querySelector('.stage-form');
+      const select = form.querySelector('select');
+      const previousColumn = card.closest('.pipeline-column');
+      const nextColumn = board.querySelector(`.pipeline-column[data-status="${status}"]`);
+      if (!nextColumn || previousColumn === nextColumn) return;
+
+      const previousStatus = previousColumn.dataset.status;
+      nextColumn.querySelector('.pipeline-cards').prepend(card);
+      select.value = status;
+      updateColumn(previousColumn);
+      updateColumn(nextColumn);
+
+      fetch(form.action, {
+        method: 'POST',
+        headers: {'Accept': 'application/json'},
+        body: new FormData(form)
+      }).then(function (response) {
+        if (!response.ok) throw new Error('Move failed');
+        card.querySelector('.pipeline-card-time').textContent = 'Moved just now';
+      }).catch(function () {
+        previousColumn.querySelector('.pipeline-cards').prepend(card);
+        select.value = previousStatus;
+        updateColumn(previousColumn);
+        updateColumn(nextColumn);
+        alert('That move could not be saved. Please try again.');
+      });
+    }
+
+    board.querySelectorAll('.pipeline-card').forEach(function (card) {
+      card.addEventListener('dragstart', function (event) {
+        draggedCard = card;
+        card.classList.add('is-dragging');
+        event.dataTransfer.effectAllowed = 'move';
+      });
+      card.addEventListener('dragend', function () {
+        card.classList.remove('is-dragging');
+        draggedCard = null;
+      });
+      card.querySelector('.stage-form select').addEventListener('change', function (event) {
+        moveCard(card, event.target.value);
+      });
+    });
+
+    board.querySelectorAll('.pipeline-column').forEach(function (column) {
+      column.addEventListener('dragover', function (event) {
+        if (!draggedCard) return;
+        event.preventDefault();
+        column.classList.add('is-drop-target');
+      });
+      column.addEventListener('dragleave', function (event) {
+        if (!column.contains(event.relatedTarget)) column.classList.remove('is-drop-target');
+      });
+      column.addEventListener('drop', function (event) {
+        event.preventDefault();
+        column.classList.remove('is-drop-target');
+        if (draggedCard) moveCard(draggedCard, column.dataset.status);
+      });
+    });
+  }
+</script>
+{% endblock %}

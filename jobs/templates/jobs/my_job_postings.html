@@ -18,6 +18,7 @@
         </p>
         <div class="inline-actions">
           <a class="button" href="{% url 'jobs.applications' job.id %}">Review applicants</a>
+          <a class="button button-secondary" href="{% url 'jobs.pipeline' job.id %}">Hiring pipeline</a>
           <a class="button button-secondary" href="{% url 'jobs.recommended_candidates' job.id %}">Skill recommendations</a>
         </div>
       </article>

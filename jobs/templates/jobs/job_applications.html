@@ -2,10 +2,15 @@
 
 {% block content %}
 <a class="back-link" href="{% url 'jobs.my_job_postings' %}">← Back to postings</a>
-<header class="page-heading">
-  <p class="eyebrow">Applications</p>
-  <h1>{{ job.title }}</h1>
-  <p>{{ applications|length }} applicant{{ applications|length|pluralize }} for {{ job.company_name }}.</p>
+<header class="page-heading map-page-heading">
+  <div>
+    <p class="eyebrow">Applications</p>
+    <h1>{{ job.title }}</h1>
+    <p>{{ applications|length }} applicant{{ applications|length|pluralize }} for {{ job.company_name }}.</p>
+  </div>
+  <div class="inline-actions">
+    <a class="button button-secondary" href="{% url 'jobs.pipeline' job.id %}">Board view</a>
+  </div>
 </header>
 
 {% if applications %}

@@ -1,0 +1,42 @@
+.inbox-layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); min-height: 560px; overflow: hidden; box-shadow: var(--shadow); }
+.conversation-list { display: flex; flex-direction: column; max-height: 640px; overflow-y: auto; border-right: 1px solid var(--line); background: white; }
+.conversation-link { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 16px 18px; border-bottom: 1px solid var(--line); border-left: 3px solid transparent; color: var(--ink); }
+.conversation-link:hover { color: var(--ink); background: var(--surface-soft); }
+.conversation-link.is-active { border-left-color: var(--brand); background: var(--brand-light); }
+.conversation-link .candidate-avatar { width: 40px; height: 40px; font-size: 1.1rem; }
+.conversation-summary { min-width: 0; }
+.conversation-summary strong, .conversation-summary small, .conversation-preview { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conversation-summary small { color: var(--brand); font-size: 0.78rem; font-weight: 700; }
+.conversation-preview { color: var(--muted); font-size: 0.86rem; }
+.unread-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+
+.thread { display: flex; flex-direction: column; min-width: 0; max-height: 640px; }
+.thread-heading { padding: 18px 24px; border-bottom: 1px solid var(--line); background: white; }
+.thread-heading h2 { margin: 0; font-size: 1.4rem; }
+.thread-heading p { margin: 2px 0 0; color: var(--muted); font-size: 0.9rem; }
+.thread-back { display: none; margin-bottom: 8px; font-size: 0.9rem; font-weight: 700; }
+.thread-messages { display: flex; flex: 1; flex-direction: column; gap: 10px; margin: 0; padding: 24px; overflow-y: auto; list-style: none; }
+.chat-message { max-width: min(520px, 80%); align-self: flex-start; }
+.chat-message p { margin: 0; padding: 11px 15px; border: 1px solid var(--line); border-radius: 14px 14px 14px 4px; background: white; overflow-wrap: anywhere; white-space: pre-line; }
+.chat-message time { display: block; margin: 4px 6px 0; color: var(--muted); font-size: 0.74rem; }
+.chat-message.is-mine { align-self: flex-end; text-align: right; }
+.chat-message.is-mine p { border-color: var(--brand); border-radius: 14px 14px 4px 14px; color: white; background: var(--brand); text-align: left; }
+.thread-empty { margin: auto; color: var(--muted); }
+.thread-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; padding: 16px 24px; border-top: 1px solid var(--line); background: white; }
+.thread-form textarea { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid #cbd8d2; border-radius: 5px; color: var(--ink); font: inherit; resize: vertical; }
+.thread-form textarea:focus { outline: 3px solid rgba(23, 107, 82, 0.13); border-color: var(--brand); }
+.thread-form .field-error { grid-column: 1 / -1; margin: 0; }
+.thread-placeholder { justify-content: center; align-items: center; padding: 40px; text-align: center; }
+.thread-placeholder h2 { margin: 0 0 6px; }
+.thread-placeholder p { margin: 0; }
+.message-button-form { margin: 0; }
+
+@media (max-width: 800px) {
+  .inbox-layout { grid-template-columns: 1fr; min-height: 0; }
+  .conversation-list { max-height: none; border-right: 0; }
+  .thread-placeholder { display: none; }
+  .has-active-thread .conversation-list { display: none; }
+  .thread-back { display: inline-block; }
+  .thread { max-height: 75vh; }
+  .thread-messages, .thread-heading, .thread-form { padding-right: 16px; padding-left: 16px; }
+}

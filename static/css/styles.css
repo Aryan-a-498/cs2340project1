@@ -71,6 +71,8 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 600; }
 .nav-form { margin: 0; }
 .nav-link-button { border: 0; background: none; padding: 0; cursor: pointer; }
 .site-nav > a:hover, .nav-link-button:hover { color: var(--brand); }
+.nav-badge { display: inline-grid; min-width: 20px; height: 20px; margin-left: 5px; padding: 0 6px; place-items: center; border-radius: 999px; color: white; background: var(--accent); font-size: 0.72rem; font-weight: 800; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .page-shell { min-height: calc(100vh - 142px); padding: 48px 0 72px; }
 .site-footer { border-top: 1px solid var(--line); color: var(--muted); background: white; }
@@ -208,6 +210,9 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 600; }
 .status-pill { display: inline-flex; align-items: center; width: fit-content; padding: 5px 10px; border-radius: 999px; color: #4e554f; background: var(--surface-soft); font-size: 0.78rem; font-weight: 750; white-space: nowrap; }
 .status-reviewing { color: #7a4b19; background: #f6e9d7; }
 .status-shortlisted { color: var(--brand-dark); background: var(--brand-light); }
+.status-tech_interview, .status-behavioral_interview { color: #2e4f73; background: #e1eaf4; }
+.status-offer { color: #6b4a12; background: #f6ecd2; }
+.status-hired { color: white; background: var(--brand); }
 .status-not_selected { color: #7a3430; background: #f5e4e1; }
 
 .review-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; }

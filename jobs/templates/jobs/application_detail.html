@@ -59,6 +59,9 @@
       <button type="submit" class="button full-width">Save status</button>
     </form>
     <hr>
+    <p class="eyebrow">Contact</p>
+    {% include "messaging/_message_button.html" with recipient=candidate.user job=application.job button_class="button button-secondary full-width" %}
+    <hr>
     <p class="eyebrow">Position</p>
     <h2>{{ application.job.title }}</h2>
     <p>{{ application.job.company_name }}<br>{{ application.job.location }}</p>

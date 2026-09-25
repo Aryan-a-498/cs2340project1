@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseBadRequest, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods, require_POST
@@ -227,6 +227,61 @@ def application_detail(request, job_id, application_id):
         'matched_skills': matched_skills,
         'status_form': form,
     })
+
+
+@login_required
+def pipeline(request, job_id):
+    if request.user.role != User.Role.RECRUITER:
+        return HttpResponseForbidden('Only recruiters can manage hiring pipelines.')
+    job = get_object_or_404(JobPosting, id=job_id, posted_by=request.user)
+    applications = job.applications.select_related(
+        'applicant__user'
+    ).prefetch_related('applicant__skills').order_by('status_changed_at')
+
+    columns = {
+        status: {'status': status, 'label': label, 'applications': []}
+        for status, label in JobApplication.Status.choices
+    }
+    for application in applications:
+        columns[application.status]['applications'].append(application)
+
+    return render(request, 'jobs/pipeline.html', {
+        'title': f'Pipeline for {job.title}',
+        'job': job,
+        'columns': list(columns.values()),
+        'status_choices': JobApplication.Status.choices,
+        'application_count': len(applications),
+    })
+
+
+@login_required
+@require_POST
+def pipeline_move(request, job_id, application_id):
+    if request.user.role != User.Role.RECRUITER:
+        return HttpResponseForbidden('Only recruiters can manage hiring pipelines.')
+    application = get_object_or_404(
+        JobApplication.objects.select_related('applicant__user'),
+        id=application_id,
+        job_id=job_id,
+        job__posted_by=request.user,
+    )
+    status = request.POST.get('status')
+    if status not in JobApplication.Status.values:
+        return HttpResponseBadRequest('Choose a valid hiring stage.')
+
+    application.move_to(status)
+    if request.headers.get('Accept') == 'application/json':
+        return JsonResponse({
+            'status': application.status,
+            'label': application.get_status_display(),
+        })
+
+    messages.success(
+        request,
+        f'{_display_name(application.applicant.user)} moved to '
+        f'{application.get_status_display()}.',
+    )
+    return redirect('jobs.pipeline', job_id=job_id)
 
 
 @login_required

@@ -1,4 +1,5 @@
 from django import forms
+from django.utils import timezone
 
 from .models import JobApplication
 
@@ -23,3 +24,9 @@ class ApplicationStatusForm(forms.ModelForm):
     class Meta:
         model = JobApplication
         fields = ('status',)
+
+    def save(self, commit=True):
+        # Keep the pipeline's "time in stage" accurate when edited from the review page.
+        if 'status' in self.changed_data:
+            self.instance.status_changed_at = timezone.now()
+        return super().save(commit)
